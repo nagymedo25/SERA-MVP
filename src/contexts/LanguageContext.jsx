@@ -14,7 +14,7 @@ export const useLanguage = () => {
 export const LanguageProvider = ({ children }) => {
     const [language, setLanguage] = useState(() => {
         const saved = localStorage.getItem('sera-language')
-        return saved || 'ar'
+        return saved || 'en'
     })
 
     const [isChanging, setIsChanging] = useState(false)
