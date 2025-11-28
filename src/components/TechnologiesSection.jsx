@@ -1,10 +1,12 @@
-import React ,{ useEffect, useRef } from 'react'
+import React, { useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useLanguage } from '../contexts/LanguageContext'
 
 gsap.registerPlugin(ScrollTrigger)
 
 const TechnologiesSection = () => {
+    const { t } = useLanguage()
     const sectionRef = useRef(null)
     const techRef = useRef([])
 
@@ -90,13 +92,13 @@ const TechnologiesSection = () => {
                 {/* Section Header */}
                 <div className="text-center mb-16">
                     <h2 className="text-5xl md:text-6xl font-bold mb-6">
-                        Built with{' '}
+                        {t('landing.technologies.title')}{' '}
                         <span className="bg-gradient-to-r from-neon-violet to-pink-500 bg-clip-text text-transparent">
-                            Cutting-Edge Tech
+                            {t('landing.technologies.subtitle')}
                         </span>
                     </h2>
                     <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-                        Leveraging the most advanced technologies in AI, psychology, and web development
+                        {t('landing.technologies.description')}
                     </p>
                 </div>
 

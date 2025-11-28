@@ -1,11 +1,13 @@
-import React ,{ useEffect, useRef, useState } from 'react'
+import React, { useEffect, useRef, useState } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Quote, ChevronLeft, ChevronRight } from 'lucide-react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 gsap.registerPlugin(ScrollTrigger)
 
 const TestimonialsSection = () => {
+    const { t } = useLanguage()
     const [currentIndex, setCurrentIndex] = useState(0)
     const testimonialRef = useRef(null)
     const sectionRef = useRef(null)
@@ -97,13 +99,13 @@ const TestimonialsSection = () => {
                 {/* Section Header */}
                 <div className="text-center mb-16">
                     <h2 className="text-5xl md:text-6xl font-bold mb-6">
-                        Trusted by{' '}
+                        {t('landing.testimonials.title')}{' '}
                         <span className="bg-gradient-to-r from-neon-blue to-neon-violet bg-clip-text text-transparent">
-                            Developers
+                            {t('landing.testimonials.subtitle')}
                         </span>
                     </h2>
                     <p className="text-xl text-gray-400">
-                        See how SERA is transforming careers
+                        {t('landing.testimonials.description')}
                     </p>
                 </div>
 
@@ -164,8 +166,8 @@ const TestimonialsSection = () => {
                                 setCurrentIndex(index)
                             }}
                             className={`w-3 h-3 rounded-full transition-all duration-300 ${index === currentIndex
-                                    ? 'bg-gradient-to-r from-neon-blue to-neon-violet w-12'
-                                    : 'bg-gray-600 hover:bg-gray-500'
+                                ? 'bg-gradient-to-r from-neon-blue to-neon-violet w-12'
+                                : 'bg-gray-600 hover:bg-gray-500'
                                 }`}
                         />
                     ))}

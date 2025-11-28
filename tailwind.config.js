@@ -9,6 +9,7 @@ export default {
             colors: {
                 'neon-blue': '#00d9ff',
                 'neon-violet': '#a855f7',
+                'neon-pink': '#ec4899',
             },
             fontFamily: {
                 sans: ['Inter', 'system-ui', 'sans-serif'],

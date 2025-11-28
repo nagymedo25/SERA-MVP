@@ -1,11 +1,13 @@
-import React , { useEffect, useRef } from 'react'
+import React, { useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Brain, Zap, Target, Shield, TrendingUp, Users } from 'lucide-react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 gsap.registerPlugin(ScrollTrigger)
 
 const FeaturesSection = () => {
+    const { t } = useLanguage()
     const sectionRef = useRef(null)
     const cardsRef = useRef([])
 
@@ -75,38 +77,38 @@ const FeaturesSection = () => {
     const features = [
         {
             icon: Brain,
-            title: 'Psychological Analysis',
-            description: 'Deep dive into your cognitive patterns, learning style, and mental energy cycles.',
+            titleKey: 'landing.features.psychologicalAnalysis',
+            descKey: 'landing.features.psychologicalAnalysisDesc',
             color: 'from-neon-violet to-purple-600'
         },
         {
             icon: Zap,
-            title: 'Real-time Adaptation',
-            description: 'Dynamic curriculum that adjusts to your current mental state and energy levels.',
+            titleKey: 'landing.features.realtimeAdaptation',
+            descKey: 'landing.features.realtimeAdaptationDesc',
             color: 'from-neon-blue to-cyan-600'
         },
         {
             icon: Target,
-            title: 'Precision Learning',
-            description: 'Targeted skill development based on your unique cognitive strengths.',
+            titleKey: 'landing.features.precisionLearning',
+            descKey: 'landing.features.precisionLearningDesc',
             color: 'from-pink-500 to-neon-violet'
         },
         {
             icon: Shield,
-            title: 'Burnout Prevention',
-            description: 'AI-powered interventions to maintain optimal performance without exhaustion.',
+            titleKey: 'landing.features.burnoutPrevention',
+            descKey: 'landing.features.burnoutPreventionDesc',
             color: 'from-green-500 to-emerald-600'
         },
         {
             icon: TrendingUp,
-            title: 'Growth Tracking',
-            description: 'Visualize your evolution across both technical and psychological dimensions.',
+            titleKey: 'landing.features.growthTracking',
+            descKey: 'landing.features.growthTrackingDesc',
             color: 'from-orange-500 to-red-600'
         },
         {
             icon: Users,
-            title: 'Personalized Coaching',
-            description: 'Guidance tailored to your personality type and learning preferences.',
+            titleKey: 'landing.features.personalizedCoaching',
+            descKey: 'landing.features.personalizedCoachingDesc',
             color: 'from-neon-blue to-neon-violet'
         }
     ]
@@ -121,13 +123,13 @@ const FeaturesSection = () => {
                 {/* Section Header */}
                 <div className="text-center mb-16">
                     <h2 className="text-5xl md:text-6xl font-bold mb-6">
-                        Powered by{' '}
+                        {t('landing.features.title')}{' '}
                         <span className="bg-gradient-to-r from-neon-blue to-neon-violet bg-clip-text text-transparent">
-                            Intelligence
+                            {t('landing.features.subtitle')}
                         </span>
                     </h2>
                     <p className="text-xl text-gray-400 max-w-3xl mx-auto">
-                        Combining cutting-edge AI with psychological research to create the ultimate learning experience
+                        {t('landing.features.description')}
                     </p>
                 </div>
 
@@ -148,10 +150,10 @@ const FeaturesSection = () => {
 
                                 {/* Content */}
                                 <h3 className="text-2xl font-bold mb-4 group-hover:text-neon-blue transition-colors">
-                                    {feature.title}
+                                    {t(feature.titleKey)}
                                 </h3>
                                 <p className="text-gray-400 leading-relaxed">
-                                    {feature.description}
+                                    {t(feature.descKey)}
                                 </p>
                             </div>
                         )

@@ -1,11 +1,13 @@
-import React ,{ useEffect, useRef } from 'react'
+import React, { useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import { Github, Twitter, Linkedin, Mail, Heart, Sparkles, Code2, Cpu } from 'lucide-react'
+import { useLanguage } from '../contexts/LanguageContext'
 
 gsap.registerPlugin(ScrollTrigger)
 
 const Footer = () => {
+    const { t } = useLanguage()
     const footerRef = useRef(null)
     const floatingIconsRef = useRef([])
 
@@ -48,18 +50,18 @@ const Footer = () => {
     ]
 
     const quickLinks = [
-        { label: 'About', href: '#' },
-        { label: 'Features', href: '#features' },
-        { label: 'How it Works', href: '#mindprint' },
-        { label: 'Testimonials', href: '#' },
-        { label: 'Blog', href: '#' },
-        { label: 'Careers', href: '#' }
+        { labelKey: 'landing.footer.about', href: '#' },
+        { labelKey: 'landing.footer.features', href: '#features' },
+        { labelKey: 'landing.footer.howItWorks', href: '#mindprint' },
+        { labelKey: 'landing.footer.testimonials', href: '#' },
+        { labelKey: 'landing.footer.blog', href: '#' },
+        { labelKey: 'landing.footer.careers', href: '#' }
     ]
 
     const legalLinks = [
-        { label: 'Privacy Policy', href: '#' },
-        { label: 'Terms of Service', href: '#' },
-        { label: 'Cookie Policy', href: '#' },
+        { labelKey: 'landing.footer.privacy', href: '#' },
+        { labelKey: 'landing.footer.terms', href: '#' },
+        { labelKey: 'landing.footer.cookies', href: '#' },
         { label: 'GDPR', href: '#' }
     ]
 
@@ -97,18 +99,11 @@ const Footer = () => {
                     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 mb-12">
                         {/* Brand Column */}
                         <div className="space-y-6">
-                            <div className="flex items-center gap-3">
-                                <img
-                                    src="/assets/logo.png"
-                                    alt="SERA Logo"
-                                    className="h-12 w-12 object-contain"
-                                />
-                                <span className="text-2xl font-bold bg-gradient-to-r from-neon-blue to-neon-violet bg-clip-text text-transparent">
-                                    SERA
-                                </span>
-                            </div>
+                            <span className="text-2xl font-bold bg-gradient-to-r from-neon-blue to-neon-violet bg-clip-text text-transparent">
+                                SERA
+                            </span>
                             <p className="text-gray-400 leading-relaxed">
-                                Revolutionizing developer education by merging psychological insights with technical mastery.
+                                {t('landing.footer.description')}
                             </p>
                             <div className="flex gap-4">
                                 {socialLinks.map((social, index) => {
@@ -129,7 +124,7 @@ const Footer = () => {
 
                         {/* Quick Links */}
                         <div>
-                            <h3 className="text-lg font-bold mb-6 text-white">Quick Links</h3>
+                            <h3 className="text-lg font-bold mb-6 text-white">{t('landing.footer.quickLinks')}</h3>
                             <ul className="space-y-3">
                                 {quickLinks.map((link, index) => (
                                     <li key={index}>
@@ -138,7 +133,7 @@ const Footer = () => {
                                             className="text-gray-400 hover:text-neon-blue transition-colors duration-300 flex items-center gap-2 group"
                                         >
                                             <span className="w-0 h-0.5 bg-neon-blue group-hover:w-4 transition-all duration-300" />
-                                            {link.label}
+                                            {t(link.labelKey)}
                                         </a>
                                     </li>
                                 ))}
@@ -147,7 +142,7 @@ const Footer = () => {
 
                         {/* Legal */}
                         <div>
-                            <h3 className="text-lg font-bold mb-6 text-white">Legal</h3>
+                            <h3 className="text-lg font-bold mb-6 text-white">{t('landing.footer.legal')}</h3>
                             <ul className="space-y-3">
                                 {legalLinks.map((link, index) => (
                                     <li key={index}>
@@ -156,7 +151,7 @@ const Footer = () => {
                                             className="text-gray-400 hover:text-neon-violet transition-colors duration-300 flex items-center gap-2 group"
                                         >
                                             <span className="w-0 h-0.5 bg-neon-violet group-hover:w-4 transition-all duration-300" />
-                                            {link.label}
+                                            {link.labelKey ? t(link.labelKey) : link.label}
                                         </a>
                                     </li>
                                 ))}
@@ -165,18 +160,18 @@ const Footer = () => {
 
                         {/* Newsletter */}
                         <div>
-                            <h3 className="text-lg font-bold mb-6 text-white">Stay Updated</h3>
+                            <h3 className="text-lg font-bold mb-6 text-white">{t('landing.footer.stayUpdated')}</h3>
                             <p className="text-gray-400 text-sm mb-4">
-                                Get the latest insights on AI-powered learning
+                                {t('landing.footer.newsletterDesc')}
                             </p>
                             <div className="space-y-3">
                                 <input
                                     type="email"
-                                    placeholder="your@email.com"
+                                    placeholder={t('landing.footer.emailPlaceholder')}
                                     className="w-full px-4 py-3 rounded-lg glass border border-white/10 bg-white/5 text-white placeholder-gray-500 focus:outline-none focus:border-neon-blue transition-all duration-300"
                                 />
                                 <button className="w-full px-4 py-3 rounded-lg bg-gradient-to-r from-neon-blue to-neon-violet text-white font-semibold hover:scale-105 transition-transform duration-300 glow-blue">
-                                    Subscribe
+                                    {t('landing.footer.subscribe')}
                                 </button>
                             </div>
                         </div>
@@ -188,22 +183,18 @@ const Footer = () => {
                     {/* Bottom Bar */}
                     <div className="flex flex-col md:flex-row justify-between items-center gap-4">
                         <p className="text-gray-500 text-sm">
-                            © {new Date().getFullYear()} SERA. All rights reserved.
+                            © {new Date().getFullYear()} SERA. {t('landing.footer.rights')}
                         </p>
-                        <p className="text-gray-500 text-sm flex items-center gap-2">
-                            Made with{' '}
-                            <Heart className="w-4 h-4 text-red-500 animate-pulse" fill="currentColor" />
-                            {' '}for developers worldwide
-                        </p>
+
                         <div className="flex gap-6 text-sm">
                             <a href="#" className="text-gray-500 hover:text-neon-blue transition-colors">
-                                Status
+                                {t('landing.footer.status')}
                             </a>
                             <a href="#" className="text-gray-500 hover:text-neon-blue transition-colors">
-                                Support
+                                {t('landing.footer.support')}
                             </a>
                             <a href="#" className="text-gray-500 hover:text-neon-blue transition-colors">
-                                API
+                                {t('landing.footer.api')}
                             </a>
                         </div>
                     </div>

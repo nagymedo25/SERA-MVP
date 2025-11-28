@@ -1,10 +1,12 @@
-import React ,{ useEffect, useRef } from 'react'
+import React, { useEffect, useRef } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
+import { useLanguage } from '../contexts/LanguageContext'
 
 gsap.registerPlugin(ScrollTrigger)
 
 const StatsSection = () => {
+    const { t } = useLanguage()
     const sectionRef = useRef(null)
     const statsRef = useRef([])
 
@@ -67,10 +69,10 @@ const StatsSection = () => {
     }, [])
 
     const stats = [
-        { value: 10000, suffix: '+', label: 'Active Users', color: 'from-neon-blue to-cyan-600' },
-        { value: 95, suffix: '%', label: 'Success Rate', color: 'from-neon-violet to-purple-600' },
-        { value: 500, suffix: '+', label: 'Courses Available', color: 'from-pink-500 to-red-600' },
-        { value: 24, suffix: '/7', label: 'AI Support', color: 'from-green-500 to-emerald-600' }
+        { value: 10000, suffix: '+', labelKey: 'landing.stats.activeUsers', color: 'from-neon-blue to-cyan-600' },
+        { value: 95, suffix: '%', labelKey: 'landing.stats.successRate', color: 'from-neon-violet to-purple-600' },
+        { value: 500, suffix: '+', labelKey: 'landing.stats.coursesAvailable', color: 'from-pink-500 to-red-600' },
+        { value: 24, suffix: '/7', labelKey: 'landing.stats.aiSupport', color: 'from-green-500 to-emerald-600' }
     ]
 
     return (
@@ -95,7 +97,7 @@ const StatsSection = () => {
                                     0{stat.suffix}
                                 </span>
                             </div>
-                            <p className="text-gray-400 text-lg">{stat.label}</p>
+                            <p className="text-gray-400 text-lg">{t(stat.labelKey)}</p>
                         </div>
                     ))}
                 </div>
