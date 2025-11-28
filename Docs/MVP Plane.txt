@@ -1,0 +1,158 @@
+بناءً على الملف المرفق ورغبتك في بناء MVP (Minimum Viable Product) يحاكي منصة SERA بشكل سينمائي قوي للعرض (Presentation/Demo)، إليك خطة عمل تقنية شاملة تركز على الإبهار البصري (Visual Impact) ومحاكاة الذكاء الاصطناعي باستخدام React, Tailwind V3, GSAP.
+
+الهدف هنا ليس بناء "Backend" حقيقي، بل بناء "Simulation Engine" (محرك محاكاة) يجعلك تتنقل في التطبيق وكأنه يعمل بالكامل أمام الجمهور.
+
+المرحلة 1: هندسة المشروع (Architecture & Setup)
+بما أن المشروع للعرض، سنعتمد على "State-Driven UI" (واجهة موجهة بالحالة) مع بيانات وهمية ذكية (Smart Mock Data).
+
+1. التقنيات الأساسية (Tech Stack):
+React: لبناء المكونات (Components).
+
+Tailwind CSS v3: للتصميم السريع (سنعتمد نمط Dark Mode & Glassmorphism لأنه يعطي طابع الذكاء الاصطناعي والمستقبل).
+
+GSAP (GreenSock):
+
+ScrollTrigger: لعرض صفحات الهبوط (Landing) والتقارير الطويلة.
+
+Flip Plugin: لتحريك البطاقات عند تغيير الترتيب (Reordering tasks).
+
+TextPlugin: لمحاكاة كتابة الذكاء الاصطناعي (Typewriter effect).
+
+Zustand (أو React Context): لإدارة حالة التطبيق (State Management) لمحاكاة تدفق البيانات بين الشاشات.
+
+2. هيكلة البيانات (The Simulation Brain):
+بدلاً من API حقيقي، سنبني ملف SimulationEngine.js يحتوي على سيناريوهات جاهزة:
+
+UserScenarios: (مثلاً سيناريو "محمود" المذكور في الملف: طاقة منخفضة -> اقتراح تمرين تنفس).
+
+MockDatabase: ملفات JSON تحتوي على الأسئلة، الكورسات، ورسائل التحفيز.
+
+المرحلة 2: تصميم التجربة السينمائية (The UX/UI Flow)
+سنقسم العمل إلى 5 محطات رئيسية للعرض التقديمي، مع التركيز على كيفية استخدام GSAP في كل محطة لإبهار الحضور.
+
+المحطة 1: الـ Onboarding المزدوج (The Scanner)
+هنا يحدث السحر الأول. بدلاً من مجرد نماذج (Forms)، سنجعلها تبدو كعملية "مسح" (Scanning).
+
+الشاشات: ترحيب -> تحليل نفسي -> تحليل تقني -> النتيجة (Mindprint).
+
+خدعة العرض (GSAP Magic):
+
+استخدم GSAP Timeline لعمل Animation لشريط تقدم يتحول إلى "موجات دماغية" (Brain waves) أثناء الانتقال من السؤال النفسي للتقني.
+
+عند ظهور النتيجة (Mindprint)، لا تظهرها فجأة. اجعل الأرقام تتعداد (Counter effect) والرسوم البيانية (Charts) تمتلئ ببطء مع تأثير Elastic.out.
+
+المحطة 2: لوحة التحكم الذكية (The Intelligence Hub)
+هذه هي الشاشة الرئيسية التي تتغير بناءً على حالة المستخدم.
+
+المكونات:
+
+Energy Orb: دائرة متوهجة نابضة (Pulsing glowing orb) تمثل طاقة المستخدم (لون أحمر = تعب، أزرق = تركيز). يتم تحريكها بـ GSAP yoyo و scale.
+
+The Recommendation: بطاقة تظهر وتختفي بنعومة تقترح: "بناءً على طاقتك المنخفضة، ابدأ بدرس 5 دقائق".
+
+المحاكاة: عند الضغط على زر "تحديث الحالة"، يتغير ترتيب البطاقات (باستخدام Flip Plugin) ليعكس الجدول الجديد فوراً.
+
+المحطة 3: نظام التعلم والتقييم (The Coding Simulator)
+محاكاة لبيئة كتابة الكود (IDE) داخل المتصفح.
+
+التفاعل:
+
+محرر كود وهمي (Fake Code Editor).
+
+زر "Run Code".
+
+خدعة العرض:
+
+لا تكتب الكود بيدك أثناء العرض. اجعل ضغطة زر واحدة تطبع الكود حرفاً حرفاً بسرعة (Simulation Typewriter) لتبدو وكأنك مبرمج سريع، أو أن المستخدم يحل الحل الصحيح.
+
+عند الخطأ: اهتزاز الشاشة (Shake effect) مع ظهور الـ Heatmap (مناطق الضعف) بلون أحمر متوهج.
+
+المحطة 4: الدعم النفسي اللحظي (Intervention)
+محاكاة سيناريو "التوتر" المذكور في الملف .
+
+السيناريو: أثناء حل الاختبار، تظهر فجأة نافذة منبثقة (Modal) بنعومة فائقة (Backdrop blur).
+
+المحتوى: دائرة تنفس (Breathing Circle) تتوسع وتنكمش بـ GSAP لمدة 5 ثوانٍ، ثم تعود للاختبار. هذا يظهر دمج الجانب النفسي بالتقني ببراعة.
+
+المحطة 5: التقارير النهائية (The Evolution)
+شاشة تعرض تطور المستخدم.
+
+GSAP ScrollTrigger: عند النزول للأسفل (Scroll)، تتحرك الخطوط البيانية (Line Charts) لترسم رحلة المستخدم من "مشتت" إلى "منجز".
+
+المرحلة 3: خطة التنفيذ البرمجية (Code Strategy)
+إليك مقتطفات لكيفية بناء الهيكل الأساسي لضمان السلاسة:
+
+1. إعداد الـ Store (Zustand) للتحكم في السيناريو:
+JavaScript
+
+// store/simulationStore.js
+import create from 'zustand';
+
+const useSimulationStore = create((set) => ({
+  mode: 'neutral', // neutral, stressed, high-focus
+  user: { name: 'محمود', level: 1 },
+  setMode: (mode) => set({ mode }),
+  
+  // وظيفة لتغيير البيانات وهمياً للعرض
+  triggerStressScenario: () => set({ mode: 'stressed' }),
+}));
+
+export default useSimulationStore;
+2. مثال على Onboarding Animation (GSAP):
+JavaScript
+
+// components/MindprintScanner.jsx
+import { useEffect, useRef } from 'react';
+import gsap from 'gsap';
+
+const MindprintScanner = ({ onComplete }) => {
+  const scannerRef = useRef(null);
+  const textRef = useRef(null);
+
+  useEffect(() => {
+    const tl = gsap.timeline({ onComplete });
+    
+    // محاكاة التحليل
+    tl.to(scannerRef.current, { width: '100%', duration: 2, ease: 'power2.inOut' })
+      .to(textRef.current, { text: "جاري تحليل الأنماط السلوكية...", duration: 1 })
+      .to(textRef.current, { text: "تم توليد الخريطة الذهنية!", duration: 1, color: '#4ade80' });
+      
+  }, []);
+
+  return (
+    <div className="w-full h-screen bg-slate-900 flex flex-col items-center justify-center">
+      <div className="w-64 h-2 bg-slate-700 rounded overflow-hidden">
+        <div ref={scannerRef} className="h-full bg-blue-500 w-0 shadow-[0_0_15px_rgba(59,130,246,0.8)]"></div>
+      </div>
+      <p ref={textRef} className="mt-4 text-white font-mono">بدء النظام...</p>
+    </div>
+  );
+};
+المرحلة 4: الجدول الزمني للتطوير (Development Roadmap)
+لإنجاز هذا الـ MVP للعرض التقديمي:
+
+الأسبوع 1: التأسيس (Skeleton):
+
+بناء الـ Router والـ Layout (Sidebar, Topbar).
+
+تجهيز الثيم (Colors, Fonts) في Tailwind.
+
+إنشاء بيانات الـ JSON الوهمية (Mock Data).
+
+الأسبوع 2: الميزات الأساسية (Core Features):
+
+بناء شاشات الـ Onboarding (الأسئلة).
+
+بناء الـ Dashboard وربطها بالبيانات الوهمية.
+
+الأسبوع 3: "الحركة والحياة" (GSAP Integration):
+
+إضافة الـ ScrollTriggers للصفحات الطويلة.
+
+إضافة تأثيرات التفاعل (Micro-interactions) للأزرار والبطاقات.
+
+تنفيذ سيناريو "التنفس" والدعم النفسي.
+
+الأسبوع 4: التلميع (Polishing & Rehearsal):
+
+إضافة "زر سري" (Hidden Control Panel) في زاوية الشاشة يمكنك من تغيير الحالة (من سعيد لمتوتر) أثناء العرض التقديمي دون أن يلاحظ الجمهور، لتثبت أن النظام ديناميكي.

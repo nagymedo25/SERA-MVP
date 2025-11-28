@@ -1,0 +1,55 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-slate-950 text-white overflow-x-hidden;
+  }
+  
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer utilities {
+  .glow-blue {
+    box-shadow: 0 0 20px rgba(0, 217, 255, 0.5),
+                0 0 40px rgba(0, 217, 255, 0.3),
+                0 0 60px rgba(0, 217, 255, 0.1);
+  }
+  
+  .glow-violet {
+    box-shadow: 0 0 20px rgba(168, 85, 247, 0.5),
+                0 0 40px rgba(168, 85, 247, 0.3),
+                0 0 60px rgba(168, 85, 247, 0.1);
+  }
+  
+  .text-glow-blue {
+    text-shadow: 0 0 10px rgba(0, 217, 255, 0.8),
+                 0 0 20px rgba(0, 217, 255, 0.5),
+                 0 0 30px rgba(0, 217, 255, 0.3);
+  }
+  
+  .text-glow-violet {
+    text-shadow: 0 0 10px rgba(168, 85, 247, 0.8),
+                 0 0 20px rgba(168, 85, 247, 0.5),
+                 0 0 30px rgba(168, 85, 247, 0.3);
+  }
+  
+  .glass {
+    background: rgba(255, 255, 255, 0.05);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  
+  .gradient-orb-1 {
+    background: radial-gradient(circle, rgba(0, 217, 255, 0.4) 0%, transparent 70%);
+    filter: blur(60px);
+  }
+  
+  .gradient-orb-2 {
+    background: radial-gradient(circle, rgba(168, 85, 247, 0.4) 0%, transparent 70%);
+    filter: blur(60px);
+  }
+}
