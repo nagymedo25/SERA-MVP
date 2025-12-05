@@ -1,376 +1,224 @@
 import React, { useState, useRef, useEffect } from 'react'
 import Editor from '@monaco-editor/react'
-import { Play, CheckCircle, XCircle, AlertTriangle, Timer, Lock, ShieldCheck } from 'lucide-react'
-import { technicalQuestions } from '../data/mockData'
+import { Play, CheckCircle, XCircle, Timer, Brain, Loader, Cpu } from 'lucide-react'
 import useSimulationStore from '../store/simulationStore'
-import gsap from 'gsap'
-import { useLanguage } from '../contexts/LanguageContext'
-import { useSearchParams, useNavigate } from 'react-router-dom'
+import Navbar from '../components/Navbar'
+import { useNavigate } from 'react-router-dom'
 
 const AssessmentPage = () => {
-    const { t } = useLanguage()
-    const [searchParams] = useSearchParams()
     const navigate = useNavigate()
-    const isFinalExam = searchParams.get('mode') === 'final'
+    const { 
+        startNewAssessment, 
+        currentAssessmentQuestions, 
+        isGeneratingQuestions, 
+        submitAnswerToAI, 
+        isEvaluating,
+        finalizeAssessmentAI,
+        isAnalyzing 
+    } = useSimulationStore()
 
-    const [currentQuestion, setCurrentQuestion] = useState(0)
+    const [currentIndex, setCurrentIndex] = useState(0)
     const [userCode, setUserCode] = useState('')
-    const [selectedAnswer, setSelectedAnswer] = useState(null)
-    const [showResult, setShowResult] = useState(false)
-    const [isCorrect, setIsCorrect] = useState(false)
-    const [score, setScore] = useState(0)
-    const [completed, setCompleted] = useState(false)
-    
-    // مؤقتات ومراقبة التوتر
+    const [selectedOption, setSelectedOption] = useState(null)
+    const [feedback, setFeedback] = useState(null)
     const [timeOnQuestion, setTimeOnQuestion] = useState(0)
-    const [totalTime, setTotalTime] = useState(0)
-    const [warnings, setWarnings] = useState(0)
+    const [finalReport, setFinalReport] = useState(null)
 
-    const { addAssessmentResult, triggerBreathingExercise, showBreathingExercise } = useSimulationStore()
-    const editorRef = useRef(null)
-    const containerRef = useRef(null)
+    // ✅ التعديل هنا: استخدام Optional Chaining (?.) لمنع الخطأ إذا كانت المصفوفة فارغة
+    const question = currentAssessmentQuestions?.[currentIndex]
 
-    const question = technicalQuestions[currentQuestion] || technicalQuestions[0]
-
-    // --- منطق الأمان ومراقبة التوتر --- //
+    // 1. تحميل الأسئلة عند فتح الصفحة
     useEffect(() => {
-        // منع القائمة المنسدلة والنسخ واللصق
-        const handleContextMenu = (e) => e.preventDefault()
-        const handleCopyPaste = (e) => {
-            e.preventDefault()
-            if (containerRef.current) {
-                gsap.to(containerRef.current, { x: 5, duration: 0.1, yoyo: true, repeat: 3 })
-            }
+        // نتأكد أننا لا نولد أسئلة إذا كانت موجودة بالفعل أو إذا كان هناك عملية توليد جارية
+        if ((!currentAssessmentQuestions || currentAssessmentQuestions.length === 0) && !isGeneratingQuestions) {
+            startNewAssessment();
         }
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-        // كشف الخروج من التبويب
-        const handleVisibilityChange = () => {
-            if (document.hidden) {
-                setWarnings(prev => prev + 1)
-            }
-        }
-
-        document.addEventListener('contextmenu', handleContextMenu)
-        document.addEventListener('copy', handleCopyPaste)
-        document.addEventListener('paste', handleCopyPaste)
-        document.addEventListener('visibilitychange', handleVisibilityChange)
-
-        return () => {
-            document.removeEventListener('contextmenu', handleContextMenu)
-            document.removeEventListener('copy', handleCopyPaste)
-            document.removeEventListener('paste', handleCopyPaste)
-            document.removeEventListener('visibilitychange', handleVisibilityChange)
-        }
-    }, [])
-
-    // المؤقت وكشف التوتر
+    // 2. المؤقت لكل سؤال
     useEffect(() => {
-        if (completed || showBreathingExercise) return
-
-        const timer = setInterval(() => {
-            setTimeOnQuestion(prev => prev + 1)
-            setTotalTime(prev => prev + 1)
-        }, 1000)
-
-        // لو طول في السؤال (أكثر من 45 ثانية) -> استراحة تنفس
-        if (timeOnQuestion > 45 && !showResult) {
-            triggerBreathingExercise()
-            setTimeOnQuestion(0)
+        let interval;
+        if (!feedback && !finalReport && question) {
+            interval = setInterval(() => setTimeOnQuestion(prev => prev + 1), 1000);
         }
+        return () => clearInterval(interval);
+    }, [feedback, finalReport, question]);
 
-        return () => clearInterval(timer)
-    }, [timeOnQuestion, completed, showBreathingExercise, showResult, triggerBreathingExercise])
-
-    // تهيئة حالة السؤال الجديد
+    // 3. تهيئة السؤال الجديد
     useEffect(() => {
-        setShowResult(false)
-        setSelectedAnswer(null)
-        setTimeOnQuestion(0)
+        if (question) {
+            setUserCode(question.starterCode || '');
+            setSelectedOption(null);
+            setFeedback(null);
+            setTimeOnQuestion(0);
+        }
+    }, [question]);
 
-        if (question.type === 'algorithm') {
-            setUserCode(question.starterCode || '')
-        } else if (question.type === 'debug') {
-            setUserCode(question.code || '')
+    const handleSubmit = async () => {
+        let answer = selectedOption;
+        if (question.type !== 'mcq') answer = userCode;
+
+        if (!answer) return;
+
+        const result = await submitAnswerToAI(question.id, answer, timeOnQuestion);
+        setFeedback(result);
+    };
+
+    const handleNext = async () => {
+        if (currentAssessmentQuestions && currentIndex < currentAssessmentQuestions.length - 1) {
+            setCurrentIndex(prev => prev + 1);
         } else {
-            setUserCode('')
+            const report = await finalizeAssessmentAI();
+            setFinalReport(report);
         }
-    }, [currentQuestion, question])
+    };
 
-    const formatTime = (seconds) => {
-        const mins = Math.floor(seconds / 60)
-        const secs = seconds % 60
-        return `${mins}:${secs.toString().padStart(2, '0')}`
-    }
-
-    const handleRunCode = () => {
-        // محاكاة التحقق من الكود
-        const correct = question.type === 'algorithm'
-            ? userCode.includes('max') || userCode.includes('Math.max')
-            : userCode.includes(question.correctCode?.slice(0, 20)) // تحقق بسيط
-
-        setIsCorrect(correct)
-        setShowResult(true)
-        if (correct) setScore(prev => prev + 1)
-    }
-
-    const handleMCQSubmit = () => {
-        const correct = selectedAnswer === question.correctAnswer
-        setIsCorrect(correct)
-        setShowResult(true)
-        if (correct) setScore(prev => prev + 1)
-    }
-
-    const handleNext = () => {
-        if (currentQuestion < technicalQuestions.length - 1) {
-            setCurrentQuestion(prev => prev + 1)
-        } else {
-            // إنهاء الاختبار
-            const finalScore = ((score / technicalQuestions.length) * 100).toFixed(0)
-            
-            if (isFinalExam) {
-                // منطق الامتحان النهائي
-                // سنفترض النجاح دائماً للعرض (أو ضع شرط >= 80)
-                if (true) { 
-                    setCompleted(true)
-                    setTimeout(() => {
-                        navigate('/certificate')
-                    }, 2500)
-                } else {
-                    alert(`نتيجتك ${finalScore}%. تحتاج لمراجعة الدروس مرة أخرى.`)
-                    navigate('/courses')
-                }
-            } else {
-                // منطق تحديد المستوى (Onboarding)
-                addAssessmentResult({
-                    score: finalScore,
-                    date: new Date().toISOString(),
-                    heatmap: {
-                        javascript_basic: finalScore > 70 ? 80 : 50,
-                        algorithms: finalScore > 60 ? 70 : 40,
-                        debugging: finalScore > 50 ? 65 : 45,
-                    },
-                })
-                setCompleted(true)
-            }
-        }
-    }
-
-    // شاشة الانتهاء (تظهر قبل التوجيه للشهادة أو التقرير)
-    if (completed) {
+    // --- شاشات التحميل ---
+    // ✅ التأكد من عرض شاشة التحميل إذا لم يكن هناك سؤال بعد
+    if (isGeneratingQuestions || !question && !finalReport) {
         return (
-            <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center p-6">
-                <div className="glass rounded-3xl p-12 max-w-2xl w-full text-center border border-white/10 animate-fade-in">
-                    <div className="w-24 h-24 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-6">
-                        <ShieldCheck className="w-12 h-12 text-green-400 animate-pulse" />
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
+                <Brain className="w-16 h-16 text-neon-blue animate-pulse mb-4" />
+                <h2 className="text-2xl font-bold">الذكاء الاصطناعي يحلل ملفك...</h2>
+                <p className="text-gray-400">جاري صياغة أسئلة تتحدى نقاط ضعفك 🧠</p>
+            </div>
+        );
+    }
+
+    if (isAnalyzing) {
+        return (
+            <div className="min-h-screen bg-slate-950 flex flex-col items-center justify-center text-white">
+                <Cpu className="w-16 h-16 text-neon-violet animate-spin mb-4" />
+                <h2 className="text-2xl font-bold">جاري تحليل الأداء النفسي والتقني...</h2>
+                <p className="text-gray-400">يتم تحديث الجينوم البرمجي الخاص بك 🧬</p>
+            </div>
+        );
+    }
+
+    // --- شاشة التقرير النهائي ---
+    if (finalReport) {
+        return (
+            <div className="min-h-screen bg-slate-950 text-white p-8 flex items-center justify-center">
+                <div className="glass max-w-2xl w-full p-8 rounded-3xl border border-neon-violet/30 text-center">
+                    <div className="w-20 h-20 bg-neon-violet/20 rounded-full flex items-center justify-center mx-auto mb-6">
+                        <CheckCircle className="w-10 h-10 text-neon-violet" />
                     </div>
-                    <h2 className="text-4xl font-bold mb-4">
-                        {isFinalExam ? 'جاري توثيق النتيجة...' : 'تم تحليل المستوى!'}
-                    </h2>
-                    <p className="text-xl text-gray-400 mb-8">
-                        {isFinalExam ? 'يتم الآن إصدار شهادتك المعتمدة' : 'تم حفظ بيانات أدائك بنجاح'}
+                    <h1 className="text-4xl font-bold mb-2">تم تحديث ملفك بنجاح!</h1>
+                    <div className="text-6xl font-bold text-transparent bg-clip-text bg-gradient-to-r from-neon-blue to-neon-violet my-6">
+                        {finalReport.finalScore}%
+                    </div>
+                    <p className="text-gray-300 leading-relaxed mb-8 text-lg">
+                        {finalReport.summary}
                     </p>
-                    
-                    {!isFinalExam && (
-                        <div className="space-y-6">
-                            <div className="text-6xl font-bold bg-gradient-to-r from-neon-blue to-neon-violet bg-clip-text text-transparent">
-                                {((score / technicalQuestions.length) * 100).toFixed(0)}%
-                            </div>
-                            <button
-                                onClick={() => navigate('/reports')}
-                                className="px-8 py-4 rounded-xl bg-gradient-to-r from-neon-blue to-neon-violet font-semibold hover:scale-105 transition-transform"
-                            >
-                                عرض التقرير التفصيلي
-                            </button>
-                        </div>
-                    )}
+                    <button 
+                        onClick={() => navigate('/dashboard')}
+                        className="px-8 py-3 bg-white text-black font-bold rounded-xl hover:scale-105 transition-transform"
+                    >
+                        العودة للوحة التحكم
+                    </button>
                 </div>
             </div>
-        )
+        );
     }
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white py-12 px-6">
-            {/* الشريط العلوي الآمن */}
-            <div className="fixed top-0 left-0 right-0 bg-slate-900/90 backdrop-blur-md border-b border-white/10 z-40 px-6 py-4 flex justify-between items-center shadow-lg">
-                <div className="flex items-center gap-2 text-red-400 animate-pulse">
-                    <Lock className="w-5 h-5" />
-                    <span className="font-mono text-sm font-bold tracking-wider">
-                        {isFinalExam ? 'FINAL EXAM MODE' : 'SECURE ENVIRONMENT'}
-                    </span>
-                </div>
-                <div className="flex items-center gap-6 font-mono">
-                    <div className="flex items-center gap-2 text-neon-blue">
-                        <Timer className="w-5 h-5" />
-                        <span className="text-lg">{formatTime(totalTime)}</span>
-                    </div>
-                    {warnings > 0 && (
-                        <div className="flex items-center gap-2 text-yellow-500 bg-yellow-500/10 px-3 py-1 rounded-full">
-                            <AlertTriangle className="w-4 h-4" />
-                            <span className="text-sm font-bold">{warnings} Warnings</span>
+        <>
+            <Navbar />
+            <div className="min-h-screen bg-slate-950 text-white py-24 px-6">
+                <div className="max-w-5xl mx-auto">
+                    {/* Header & Timer */}
+                    <div className="flex justify-between items-center mb-8">
+                        <div className="text-gray-400">
+                            سؤال {currentIndex + 1} من {currentAssessmentQuestions?.length || 0}
                         </div>
-                    )}
-                </div>
-            </div>
-
-            <div className="max-w-6xl mx-auto mt-20">
-                {/* شريط التقدم */}
-                <div className="mb-8">
-                    <div className="flex justify-between items-center mb-2">
-                        <span className="text-sm text-gray-400 font-medium">
-                            السؤال {currentQuestion + 1} <span className="text-gray-600">/</span> {technicalQuestions.length}
-                        </span>
-                        <span className="text-sm text-neon-violet font-bold">Front-End Engineering</span>
-                    </div>
-                    <div className="w-full h-2 bg-slate-800 rounded-full overflow-hidden">
-                        <div
-                            className="h-full bg-gradient-to-r from-neon-blue to-neon-violet transition-all duration-700 ease-out"
-                            style={{ width: `${((currentQuestion + 1) / technicalQuestions.length) * 100}%` }}
-                        />
-                    </div>
-                </div>
-
-                {/* حاوية السؤال */}
-                <div ref={containerRef} className="glass rounded-3xl p-8 md:p-10 border border-white/10 mb-8 relative overflow-hidden shadow-2xl">
-                    {/* شريط علوي ملون */}
-                    <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-neon-blue via-purple-500 to-neon-violet" />
-
-                    <div className="mb-8">
-                        <div className="flex flex-wrap items-center gap-3 mb-4">
-                            <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-                                question.difficulty === 'beginner' ? 'bg-green-500/20 text-green-400' :
-                                question.difficulty === 'intermediate' ? 'bg-yellow-500/20 text-yellow-400' :
-                                'bg-red-500/20 text-red-400'
-                            }`}>
-                                {question.difficulty}
-                            </span>
-                            <span className="px-3 py-1 rounded-full bg-white/5 text-gray-400 text-xs font-bold uppercase border border-white/5">
-                                {question.type.replace('_', ' ')}
-                            </span>
+                        <div className="flex items-center gap-2 text-neon-blue font-mono text-xl">
+                            <Timer className="w-5 h-5" />
+                            {Math.floor(timeOnQuestion / 60)}:{String(timeOnQuestion % 60).padStart(2, '0')}
                         </div>
-                        <h2 className="text-2xl md:text-3xl font-bold leading-relaxed" dir="auto">
-                            {question.question}
-                        </h2>
                     </div>
 
-                    {/* المحتوى التفاعلي */}
-                    {question.type === 'mcq' ? (
-                        <div className="space-y-6">
-                            {question.code && (
-                                <div className="bg-[#1e1e1e] rounded-xl p-6 border border-white/10 shadow-inner overflow-x-auto">
-                                    <pre className="text-sm font-mono text-gray-300" dir="ltr">
-                                        <code>{question.code}</code>
-                                    </pre>
-                                </div>
-                            )}
-                            
-                            <div className="grid gap-4">
-                                {question.options.map((option) => {
-                                    const isSelected = selectedAnswer === option.value
-                                    const isCorrectOpt = question.correctAnswer === option.value
-                                    
-                                    let btnClass = 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'
-                                    if (showResult) {
-                                        if (isCorrectOpt) btnClass = 'bg-green-500/20 border-green-500 text-green-400'
-                                        else if (isSelected) btnClass = 'bg-red-500/20 border-red-500 text-red-400'
-                                    } else if (isSelected) {
-                                        btnClass = 'bg-neon-blue/20 border-neon-blue text-white ring-1 ring-neon-blue'
-                                    }
+                    {/* Question Card */}
+                    <div className="glass rounded-3xl p-8 border border-white/10 mb-8">
+                        <div className="mb-6">
+                            <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold mb-3 uppercase tracking-wide
+                                ${question.difficulty === 'hard' ? 'bg-red-500/20 text-red-400' : 'bg-blue-500/20 text-blue-400'}`}>
+                                {question.difficulty} | {question.type}
+                            </span>
+                            <h2 className="text-2xl font-bold leading-relaxed" dir="auto">{question.question}</h2>
+                        </div>
 
-                                    return (
-                                        <button
-                                            key={option.value}
-                                            onClick={() => !showResult && setSelectedAnswer(option.value)}
-                                            disabled={showResult}
-                                            className={`w-full text-left px-6 py-5 rounded-xl border transition-all duration-200 flex items-center justify-between group ${btnClass}`}
-                                        >
-                                            <span className="font-medium text-lg">{option.label}</span>
-                                            {isSelected && !showResult && <div className="w-3 h-3 rounded-full bg-neon-blue shadow-[0_0_10px_rgba(0,217,255,0.8)]" />}
-                                        </button>
-                                    )
-                                })}
+                        {/* Interactive Area */}
+                        {question.type === 'mcq' ? (
+                            <div className="grid gap-3">
+                                {question.options?.map((opt, idx) => (
+                                    <button
+                                        key={idx}
+                                        onClick={() => !feedback && setSelectedOption(opt.value)}
+                                        disabled={!!feedback}
+                                        className={`w-full text-left p-4 rounded-xl border transition-all ${
+                                            selectedOption === opt.value 
+                                                ? 'bg-neon-blue/20 border-neon-blue text-white' 
+                                                : 'bg-white/5 border-white/10 hover:bg-white/10'
+                                        }`}
+                                    >
+                                        {opt.label}
+                                    </button>
+                                ))}
                             </div>
-
-                            {!showResult && selectedAnswer && (
-                                <button 
-                                    onClick={handleMCQSubmit} 
-                                    className="w-full mt-4 px-8 py-4 rounded-xl bg-gradient-to-r from-neon-blue to-neon-violet font-bold text-lg hover:scale-[1.01] transition-transform shadow-lg shadow-neon-blue/20"
-                                >
-                                    تأكيد الإجابة
-                                </button>
-                            )}
-                        </div>
-                    ) : (
-                        <div className="space-y-6">
-                            <div className="bg-[#1e1e1e] rounded-xl overflow-hidden border border-white/10 shadow-2xl">
-                                <div className="bg-[#2d2d2d] px-4 py-2 flex items-center gap-2 border-b border-white/5">
-                                    <div className="w-3 h-3 rounded-full bg-red-500/50" />
-                                    <div className="w-3 h-3 rounded-full bg-yellow-500/50" />
-                                    <div className="w-3 h-3 rounded-full bg-green-500/50" />
-                                    <span className="ml-2 text-xs text-gray-500 font-mono">editor.js</span>
-                                </div>
+                        ) : (
+                            <div className="border border-white/10 rounded-xl overflow-hidden">
                                 <Editor
                                     height="400px"
                                     defaultLanguage="javascript"
                                     theme="vs-dark"
                                     value={userCode}
-                                    onChange={(value) => setUserCode(value || '')}
-                                    options={{
-                                        minimap: { enabled: false },
-                                        fontSize: 15,
-                                        fontFamily: "'Space Grotesk', monospace",
-                                        lineNumbers: 'on',
-                                        padding: { top: 20, bottom: 20 },
-                                        scrollBeyondLastLine: false,
-                                        cursorBlinking: 'smooth',
-                                        smoothScrolling: true,
-                                    }}
+                                    onChange={(val) => !feedback && setUserCode(val)}
+                                    options={{ readOnly: !!feedback, minimap: { enabled: false }, fontSize: 16 }}
                                 />
                             </div>
-                            
-                            {!showResult && (
-                                <div className="flex justify-end">
-                                    <button 
-                                        onClick={handleRunCode} 
-                                        className="flex items-center gap-2 px-8 py-4 rounded-xl bg-green-600 hover:bg-green-500 text-white font-bold transition-all shadow-lg shadow-green-900/20 hover:shadow-green-500/20 hover:-translate-y-1"
+                        )}
+
+                        {/* Actions Area */}
+                        <div className="mt-8 flex justify-end">
+                            {!feedback ? (
+                                <button
+                                    onClick={handleSubmit}
+                                    disabled={isEvaluating}
+                                    className="flex items-center gap-2 px-8 py-3 bg-gradient-to-r from-neon-blue to-neon-violet rounded-xl font-bold hover:scale-105 transition-transform disabled:opacity-50"
+                                >
+                                    {isEvaluating ? <Loader className="animate-spin" /> : <Play className="w-5 h-5 fill-current" />}
+                                    {isEvaluating ? 'جاري التحليل...' : 'إرسال وتحليل'}
+                                </button>
+                            ) : (
+                                <div className="w-full animate-fade-in">
+                                    <div className={`p-6 rounded-xl border mb-6 ${feedback.isCorrect ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
+                                        <div className="flex items-center gap-3 mb-2">
+                                            {feedback.isCorrect ? <CheckCircle className="text-green-400" /> : <XCircle className="text-red-400" />}
+                                            <h3 className="font-bold text-lg">{feedback.isCorrect ? 'إجابة صحيحة' : 'تحتاج لمراجعة'}</h3>
+                                        </div>
+                                        <p className="text-gray-300 mb-2">{feedback.explanation}</p>
+                                        
+                                        {/* AI Psychological Note */}
+                                        {feedback.psychologicalNote && (
+                                            <div className="mt-3 pt-3 border-t border-white/10 text-sm text-neon-blue flex items-start gap-2">
+                                                <Brain className="w-4 h-4 mt-1 shrink-0" />
+                                                <p>ملاحظة الذكاء الاصطناعي: {feedback.psychologicalNote}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                    <button
+                                        onClick={handleNext}
+                                        className="w-full py-3 bg-white/10 hover:bg-white/20 rounded-xl font-bold transition-colors"
                                     >
-                                        <Play className="w-5 h-5 fill-current" />
-                                        تشغيل واختبار الكود
+                                        {currentIndex < (currentAssessmentQuestions?.length || 0) - 1 ? 'السؤال التالي' : 'إنهاء وعرض التقرير'}
                                     </button>
                                 </div>
                             )}
                         </div>
-                    )}
-
-                    {/* النتيجة والتغذية الراجعة */}
-                    {showResult && (
-                        <div className={`mt-8 p-6 rounded-2xl border animate-slide-up ${isCorrect ? 'bg-green-500/10 border-green-500/30' : 'bg-red-500/10 border-red-500/30'}`}>
-                            <div className="flex items-start gap-4">
-                                <div className={`p-2 rounded-full ${isCorrect ? 'bg-green-500/20' : 'bg-red-500/20'}`}>
-                                    {isCorrect ? <CheckCircle className="w-6 h-6 text-green-400" /> : <XCircle className="w-6 h-6 text-red-400" />}
-                                </div>
-                                <div className="flex-1">
-                                    <h3 className={`text-lg font-bold mb-1 ${isCorrect ? 'text-green-400' : 'text-red-400'}`}>
-                                        {isCorrect ? 'إجابة صحيحة!' : 'حاول مرة أخرى'}
-                                    </h3>
-                                    <p className="text-gray-300 leading-relaxed text-sm md:text-base">
-                                        {question.explanation || (isCorrect ? 'أحسنت! المنطق البرمجي صحيح.' : 'تأكد من مراجعة المفاهيم الأساسية.')}
-                                    </p>
-                                </div>
-                            </div>
-                            
-                            <div className="mt-6 flex justify-end">
-                                <button 
-                                    onClick={handleNext} 
-                                    className="px-8 py-3 rounded-xl bg-white/10 hover:bg-white/20 border border-white/10 font-bold transition-all hover:scale-105"
-                                >
-                                    {currentQuestion < technicalQuestions.length - 1 ? 'السؤال التالي' : isFinalExam ? 'إنهاء واستلام الشهادة' : 'إنهاء التقييم'}
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    </div>
                 </div>
             </div>
-        </div>
+        </>
     )
 }
 

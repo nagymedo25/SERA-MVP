@@ -1,149 +1,126 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import gsap from 'gsap'
-import { Clock, Calendar, Zap, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Clock, Calendar, Zap, AlertTriangle, Loader, BookOpen } from 'lucide-react'
 import Navbar from '../components/Navbar'
+import useSimulationStore from '../store/simulationStore'
 
 const CourseSetup = () => {
     const navigate = useNavigate()
-    const [hours, setHours] = useState(30)
-    const [days, setDays] = useState(7)
-    const [dailyDesc, setDailyDesc] = useState('')
-    const [status, setStatus] = useState('neutral') // neutral, valid, invalid
-    const [message, setMessage] = useState('')
+    const location = useLocation()
+    const { courses, generateCourseSchedule } = useSimulationStore()
     
+    // جلب الـ ID من الـ State
+    const courseId = location.state?.courseId
+    // البحث عن الكورس
+    const targetCourse = courses.find(c => c.id === courseId)
+
+    const [dailyDesc, setDailyDesc] = useState('')
+    const [isLoading, setIsLoading] = useState(false)
     const containerRef = useRef(null)
 
-    // حساب الكثافة اليومية
-    const dailyLoad = (hours / days).toFixed(1)
-
+    // التحقق من صحة الكورس والتوجيه إذا كان غير موجود
     useEffect(() => {
-        // أنيميشن دخول الصفحة
-        gsap.fromTo(containerRef.current, 
-            { opacity: 0, y: 30 },
-            { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }
-        )
-    }, [])
-
-    const validatePlan = () => {
-        if (dailyLoad > 12) {
-            setStatus('invalid')
-            setMessage('مستحيل! لا يمكنك الدراسة أكثر من 12 ساعة يومياً بتركيز. زد عدد الأيام.')
-            // اهتزاز للتحذير
-            gsap.to('.status-box', { x: 5, duration: 0.1, yoyo: true, repeat: 3 })
-        } else if (dailyLoad > 6) {
-            setStatus('valid')
-            setMessage('خطة مكثفة جداً (Hardcore). هل أنت مستعد للتحدي؟ 🔥')
-        } else if (dailyLoad < 1) {
-            setStatus('valid')
-            setMessage('خطة مريحة جداً. ممتاز للاستمرارية. 🌱')
-        } else {
-            setStatus('valid')
-            setMessage('خطة متوازنة وواقعية. 🚀')
+        if (!courseId || !targetCourse) {
+            console.warn("No course selected, redirecting to courses page.");
+            navigate('/courses', { replace: true });
+            return;
         }
+
+        // أنيميشن الدخول (فقط إذا كان العنصر موجوداً)
+        if (containerRef.current) {
+            gsap.fromTo(containerRef.current, 
+                { opacity: 0, y: 30 },
+                { opacity: 1, y: 0, duration: 0.8, ease: 'power3.out' }
+            )
+        }
+    }, [courseId, targetCourse, navigate])
+
+    const handleStart = async () => {
+        if (!dailyDesc.trim()) return
+
+        setIsLoading(true)
+        
+        if (targetCourse) {
+            // توليد جدول لهذا الكورس
+            await generateCourseSchedule(targetCourse.id, dailyDesc)
+        }
+
+        setIsLoading(false)
+        navigate('/initializing', { state: { nextPath: `/lesson/${targetCourse?.id}_1_1` } })
     }
 
-    // التحقق عند تغيير القيم
-    useEffect(() => {
-        validatePlan()
-    }, [hours, days])
-
-    const handleStart = () => {
-        if (status === 'valid') {
-            navigate('/initializing')
-        }
-    }
+    // إذا لم يتم تحميل الكورس بعد (أو جاري التوجيه)، لا تعرض شيئاً لتجنب الأخطاء
+    if (!targetCourse) return null;
 
     return (
         <>
             <Navbar />
             <div className="min-h-screen bg-slate-950 text-white py-24 px-6 flex items-center justify-center">
-                <div ref={containerRef} className="max-w-2xl w-full">
+                <div ref={containerRef} className="max-w-2xl w-full opacity-0"> {/* نبدأ بـ opacity-0 لمنع الوميض */}
                     <div className="text-center mb-10">
-                        <h1 className="text-4xl font-bold mb-4">صمم مسارك التعليمي 🛠️</h1>
-                        <p className="text-gray-400">الذكاء الاصطناعي سيقوم بجدولة الدروس بناءً على وقتك.</p>
+                        <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-neon-blue/10 text-neon-blue mb-4">
+                            <Calendar className="w-8 h-8" />
+                        </div>
+                        <h1 className="text-4xl font-bold mb-4">
+                            تخصيص مسار: {targetCourse.title}
+                        </h1>
+                        <p className="text-gray-400">
+                            الذكاء الاصطناعي سيقوم بدمج <span className="text-white font-bold">{targetCourse.lessonsCount || 'الدروس'}</span> داخل جدولك اليومي بدقة.
+                        </p>
                     </div>
 
                     <div className="glass rounded-3xl p-8 border border-white/10 space-y-8">
+                        {/* معلومات الكورس */}
+                        <div className="bg-white/5 p-4 rounded-xl flex items-center gap-4 border border-white/10">
+                            <div className="p-3 bg-neon-violet/20 rounded-lg">
+                                <BookOpen className="w-6 h-6 text-neon-violet" />
+                            </div>
+                            <div>
+                                <div className="text-sm text-gray-400">الكورس المختار</div>
+                                <div className="font-bold">{targetCourse.title}</div>
+                                <div className="text-xs text-gray-500 mt-1">{targetCourse.duration} • {targetCourse.difficulty}</div>
+                            </div>
+                        </div>
+
                         {/* وصف اليوم */}
                         <div className="space-y-3">
-                            <label className="text-sm font-semibold text-gray-300">صف يومك باختصار (متى تكون متفرغاً؟)</label>
+                            <label className="text-sm font-semibold text-gray-300 flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-neon-blue" />
+                                كيف يبدو يومك؟ (أوقات العمل، الفراغ، النوم)
+                            </label>
                             <textarea
                                 value={dailyDesc}
                                 onChange={(e) => setDailyDesc(e.target.value)}
-                                placeholder="مثلاً: أعمل من 9 لـ 5، ومتفرغ بعد الساعة 7 مساءً..."
-                                className="w-full h-24 bg-slate-900/50 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-neon-blue focus:outline-none transition-colors resize-none"
+                                placeholder="مثلاً: أعمل من 9 صباحاً لـ 5 مساءً، وأذهب للنادي من 6 لـ 8. أفضل المذاكرة في الليل بهدوء..."
+                                className="w-full h-32 bg-slate-900/50 border border-white/10 rounded-xl p-4 text-white placeholder-gray-600 focus:border-neon-blue focus:outline-none transition-colors resize-none leading-relaxed"
                             />
-                        </div>
-
-                        {/* المدخلات: الساعات والأيام */}
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                            <div className="space-y-4">
-                                <div className="flex justify-between">
-                                    <label className="flex items-center gap-2 text-sm font-semibold">
-                                        <Clock className="w-4 h-4 text-neon-blue" />
-                                        ساعات الكورس
-                                    </label>
-                                    <span className="text-neon-blue font-mono">{hours} ساعة</span>
-                                </div>
-                                <input
-                                    type="range"
-                                    min="10"
-                                    max="100"
-                                    step="5"
-                                    value={hours}
-                                    onChange={(e) => setHours(Number(e.target.value))}
-                                    className="w-full accent-neon-blue h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
-
-                            <div className="space-y-4">
-                                <div className="flex justify-between">
-                                    <label className="flex items-center gap-2 text-sm font-semibold">
-                                        <Calendar className="w-4 h-4 text-neon-violet" />
-                                        المدة المتاحة
-                                    </label>
-                                    <span className="text-neon-violet font-mono">{days} يوم</span>
-                                </div>
-                                <input
-                                    type="range"
-                                    min="3"
-                                    max="60"
-                                    value={days}
-                                    onChange={(e) => setDays(Number(e.target.value))}
-                                    className="w-full accent-neon-violet h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer"
-                                />
-                            </div>
-                        </div>
-
-                        {/* حالة الخطة */}
-                        <div className={`status-box p-4 rounded-xl border transition-all duration-300 ${
-                            status === 'invalid' 
-                                ? 'bg-red-500/10 border-red-500/50 text-red-400' 
-                                : 'bg-green-500/10 border-green-500/50 text-green-400'
-                        }`}>
-                            <div className="flex items-start gap-3">
-                                {status === 'invalid' ? <AlertTriangle className="w-5 h-5 shrink-0" /> : <Zap className="w-5 h-5 shrink-0" />}
-                                <div>
-                                    <div className="font-bold mb-1">
-                                        المعدل اليومي: {dailyLoad} ساعة/يوم
-                                    </div>
-                                    <p className="text-sm opacity-90">{message}</p>
-                                </div>
-                            </div>
+                            <p className="text-xs text-gray-500">
+                                كلما كنت دقيقاً، كان الجدول أكثر واقعية وقابلية للتنفيذ.
+                            </p>
                         </div>
 
                         {/* زر البدء */}
                         <button
                             onClick={handleStart}
-                            disabled={status === 'invalid'}
-                            className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 ${
-                                status === 'invalid'
+                            disabled={!dailyDesc.trim() || isLoading}
+                            className={`w-full py-4 rounded-xl font-bold text-lg transition-all duration-300 flex items-center justify-center gap-3 ${
+                                !dailyDesc.trim() || isLoading
                                     ? 'bg-slate-800 text-gray-500 cursor-not-allowed'
                                     : 'bg-gradient-to-r from-neon-blue to-neon-violet hover:scale-[1.02] shadow-lg shadow-neon-blue/20'
                             }`}
                         >
-                            {status === 'invalid' ? 'الخطة غير منطقية' : 'بناء المنهج (Initialize)'}
+                            {isLoading ? (
+                                <>
+                                    <Loader className="w-5 h-5 animate-spin" />
+                                    جاري تحليل الروتين وبناء الجدول...
+                                </>
+                            ) : (
+                                <>
+                                    <Zap className="w-5 h-5" />
+                                    بناء الجدول الذكي
+                                </>
+                            )}
                         </button>
                     </div>
                 </div>

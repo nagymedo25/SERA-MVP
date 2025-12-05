@@ -11,11 +11,13 @@ import TestimonialsSection from '../components/TestimonialsSection'
 import Footer from '../components/Footer'
 import Logo from '../assets/Logo.png'
 import { Code, Sparkles, ChevronRight } from 'lucide-react'
+import useSimulationStore from '../store/simulationStore' // إضافة لاستدعاء الستور
 
 gsap.registerPlugin(ScrollTrigger)
 
 function LandingPage() {
     const { t } = useLanguage()
+    const { user } = useSimulationStore() // للتحقق من حالة الدخول
     const heroSectionRef = useRef(null)
     const heroTextRef = useRef(null)
     const mindprintRef = useRef(null)
@@ -27,14 +29,14 @@ function LandingPage() {
     useEffect(() => {
         // Hero Section Animations
         if (heroTextRef.current) {
+            // ✅ إصلاح الخطأ: تحريك العنصر نفسه بدلاً من .children
             gsap.fromTo(
-                heroTextRef.current.children,
+                heroTextRef.current,
                 { opacity: 0, y: 20 },
                 {
                     opacity: 1,
                     y: 0,
                     duration: 1,
-                    stagger: 0.2,
                     ease: 'power3.out',
                     scrollTrigger: {
                         trigger: heroTextRef.current,
@@ -49,7 +51,7 @@ function LandingPage() {
         const cards = gsap.utils.toArray('.mindprint-card')
         if (cards.length > 0 && cardsContainerRef.current && mindprintRef.current) {
             gsap.to(cardsContainerRef.current, {
-                x: () => -(cardsContainerRef.current.scrollWidth - window.innerWidth + 100), // Adjust 100 for padding/gap
+                x: () => -(cardsContainerRef.current.scrollWidth - window.innerWidth + 100),
                 ease: 'none',
                 scrollTrigger: {
                     trigger: mindprintRef.current,
@@ -83,7 +85,6 @@ function LandingPage() {
             )
         }
 
-        // Cleanup
         return () => {
             ScrollTrigger.getAll().forEach(trigger => trigger.kill())
         }
@@ -126,24 +127,20 @@ function LandingPage() {
 
     return (
         <div className="relative min-h-screen font-sans">
-            {/* Navbar */}
             <Navbar />
 
-            {/* Animated Background Orbs */}
             <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
                 <div className="absolute top-20 left-10 w-96 h-96 gradient-orb-1 animate-float" />
                 <div className="absolute bottom-20 right-10 w-[500px] h-[500px] gradient-orb-2 animate-float" style={{ animationDelay: '2s' }} />
                 <div className="absolute top-1/2 left-1/2 w-80 h-80 gradient-orb-1 animate-float" style={{ animationDelay: '4s' }} />
             </div>
 
-            {/* Hero Section */}
             <section
                 ref={heroSectionRef}
                 id="hero"
                 className="mt-[50px] relative z-10 min-h-screen flex flex-col items-center justify-center px-6 overflow-hidden pt-20"
             >
                 <div className="text-center space-y-8 max-w-5xl mx-auto">
-
                     <div className="flex justify-center mb-8">
                         <div className="relative flex items-center justify-center">
                             <img
@@ -154,7 +151,6 @@ function LandingPage() {
                         </div>
                     </div>
 
-                    {/* Headline with Staggered Reveal */}
                     <h1
                         ref={heroTextRef}
                         className="text-7xl md:text-8xl font-bold tracking-tight"
@@ -162,13 +158,11 @@ function LandingPage() {
                         {t('landing.hero.title')}
                     </h1>
 
-                    {/* Subheadline */}
                     <p className="text-2xl md:text-3xl text-gray-400 font-light">
                         {t('landing.hero.subtitle')} <span className="text-neon-violet text-glow-violet">{t('landing.hero.psychology')}</span> {t('landing.hero.meets')}{' '}
                         <span className="text-neon-blue text-glow-blue">{t('landing.hero.algorithms')}</span>
                     </p>
 
-                    {/* Decorative Elements */}
                     <div className="flex justify-center gap-4 pt-8">
                         <div className="w-1 h-20 bg-gradient-to-b from-neon-blue to-transparent glow-blue" />
                         <div className="w-1 h-20 bg-gradient-to-b from-neon-violet to-transparent glow-violet" style={{ animationDelay: '0.5s' }} />
@@ -176,13 +170,9 @@ function LandingPage() {
                 </div>
             </section>
 
-            {/* Features Section */}
             <FeaturesSection />
-
-            {/* Stats Section */}
             <StatsSection />
 
-            {/* Mindprint Section - Horizontal Scroll */}
             <section
                 id="mindprint"
                 ref={mindprintRef}
@@ -194,7 +184,6 @@ function LandingPage() {
                         className="flex gap-8 px-8"
                         style={{ width: 'fit-content' }}
                     >
-                        {/* Card 1: Psychological Scan */}
                         <div className="mindprint-card min-w-[500px] h-[600px] glass rounded-3xl p-12 flex flex-col justify-between">
                             <div className="space-y-6">
                                 <div className="w-20 h-20 flex items-center justify-center">
@@ -215,7 +204,6 @@ function LandingPage() {
                             <div className="w-full h-1 bg-gradient-to-r from-neon-violet to-transparent rounded-full" />
                         </div>
 
-                        {/* Card 2: Skill Assessment */}
                         <div className="mindprint-card min-w-[500px] h-[600px] glass rounded-3xl p-12 flex flex-col justify-between">
                             <div className="space-y-6">
                                 <div className="w-20 h-20 rounded-2xl bg-neon-blue/20 glow-blue flex items-center justify-center">
@@ -232,7 +220,6 @@ function LandingPage() {
                             <div className="w-full h-1 bg-gradient-to-r from-neon-blue to-transparent rounded-full" />
                         </div>
 
-                        {/* Card 3: Life Trajectory */}
                         <div className="mindprint-card min-w-[500px] h-[600px] glass rounded-3xl p-12 flex flex-col justify-between">
                             <div className="space-y-6">
                                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-neon-blue to-neon-violet glow-violet flex items-center justify-center">
@@ -252,10 +239,8 @@ function LandingPage() {
                 </div>
             </section>
 
-            {/* Technologies Section */}
             <TechnologiesSection />
 
-            {/* Philosophy Section - Parallax */}
             <section id="philosophy" className="relative z-10 min-h-screen flex items-center justify-center px-6 py-32">
                 <div className="max-w-4xl mx-auto text-center">
                     <div
@@ -274,10 +259,8 @@ function LandingPage() {
                 </div>
             </section>
 
-            {/* Testimonials Section */}
             <TestimonialsSection />
 
-            {/* CTA Section - Magnetic Button */}
             <section
                 ref={ctaSectionRef}
                 id="cta"
@@ -290,7 +273,7 @@ function LandingPage() {
                     </div>
 
                     <div className="flex justify-center">
-                        <Link to="/domain-selection">
+                        <Link to={user ? "/dashboard" : "/onboarding"}>
                             <button
                                 ref={ctaButtonRef}
                                 className="group relative px-12 py-6 text-xl font-semibold rounded-2xl bg-gradient-to-r from-neon-blue to-neon-violet glow-blue transition-all duration-300 hover:scale-105 hover:glow-violet"
@@ -306,7 +289,6 @@ function LandingPage() {
                 </div>
             </section>
 
-            {/* Footer */}
             <Footer />
         </div>
     )

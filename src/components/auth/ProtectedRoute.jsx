@@ -3,9 +3,12 @@ import { Navigate } from 'react-router-dom'
 import useSimulationStore from '../../store/simulationStore'
 
 const ProtectedRoute = ({ children }) => {
-    const { isAuthenticated } = useSimulationStore()
+    // 🛑 الخطأ كان هنا: const { isAuthenticated } = ...
+    // ✅ التصحيح: نتحقق من وجود الكائن "user"
+    const user = useSimulationStore((state) => state.user)
 
-    if (!isAuthenticated) {
+    // إذا لم يكن هناك مستخدم (user = null)، وجهه لصفحة الدخول
+    if (!user) {
         return <Navigate to="/login" replace />
     }
 

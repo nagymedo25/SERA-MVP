@@ -1,196 +1,259 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import gsap from 'gsap'
-import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { coursesData } from '../data/mockData'
-import useSimulationStore from '../store/simulationStore'
-import { BookOpen, Clock, CheckCircle, Lock, PlayCircle, Calendar, Trophy, Star } from 'lucide-react'
+import { BookOpen, Clock, Plus, Trash2, Edit2, PlayCircle, Loader, X, Save, Calendar, CheckCircle } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
-import { useLanguage } from '../contexts/LanguageContext'
-
-gsap.registerPlugin(ScrollTrigger)
+import AnimatedCard from '../components/AnimatedCard'
+import useSimulationStore from '../store/simulationStore'
 
 const CoursePage = () => {
-    const { t } = useLanguage()
     const navigate = useNavigate()
-    const { completedLessons } = useSimulationStore()
-    const timelineRef = useRef(null)
+    const { 
+        courses, 
+        addNewCourseAI, 
+        deleteCourse, 
+        updateCourse, 
+        isAnalyzing 
+    } = useSimulationStore()
+
+    const [isModalOpen, setIsModalOpen] = useState(false)
+    const [isEditMode, setIsEditMode] = useState(null)
+    const [newTopic, setNewTopic] = useState('')
+    const [editForm, setEditForm] = useState({})
+    
     const cardsRef = useRef([])
 
-    // محاكاة لجدول "اليوم" بناءً على التخصيص
-    const allLessonsCompleted = true // متغير للتحكم في فتح الاختبار النهائي
-
-    const todaySchedule = [
-        { time: '09:00 AM', type: 'lesson', courseId: 'course_1', lessonIndex: 0, status: 'completed' },
-        { time: '10:30 AM', type: 'quiz', title: 'Quiz: JavaScript Basics', status: 'completed' },
-        { time: '01:00 PM', type: 'lesson', courseId: 'course_1', lessonIndex: 1, status: 'current' },
-        { time: '03:30 PM', type: 'lesson', courseId: 'course_1', lessonIndex: 2, status: 'locked' },
-        { time: '08:00 PM', type: 'assignment', title: 'Final Assignment: Capstone Project', status: allLessonsCompleted ? 'unlocked' : 'locked', isFinal: true }
-    ]
-
-    const getLessonData = (courseId, index) => {
-        const course = coursesData.find(c => c.id === courseId)
-        return course?.lessons?.[index] || { title: 'Unknown Lesson', duration: '0m' }
-    }
-
+    // أنيميشن عند تحميل القائمة
     useEffect(() => {
-        // حركة دخول خط الزمن
-        if (timelineRef.current) {
-            gsap.fromTo(timelineRef.current, 
-                { height: 0 }, 
-                { height: '100%', duration: 1.5, ease: 'power2.inOut' }
+        if (cardsRef.current.length > 0) {
+            gsap.fromTo(cardsRef.current.filter(Boolean), 
+                { opacity: 0, y: 50 },
+                { opacity: 1, y: 0, duration: 0.6, stagger: 0.1, ease: 'power3.out' }
             )
         }
+    }, [courses.length])
 
-        // حركة دخول الكروت
-        gsap.fromTo(cardsRef.current,
-            { opacity: 0, x: -30 },
-            { opacity: 1, x: 0, duration: 0.8, stagger: 0.15, ease: 'power3.out', delay: 0.5 }
-        )
-    }, [])
+    const handleAddCourse = async (e) => {
+        e.preventDefault();
+        if (!newTopic.trim()) return;
+        
+        await addNewCourseAI(newTopic); // استدعاء الـ AI
+        setNewTopic('');
+        setIsModalOpen(false);
+    }
 
-    const handleLessonParams = (courseId, idx) => `${courseId}_${idx + 1}`
+    // التوجيه الذكي
+    const handleCourseAction = (course) => {
+        if (course.isScheduled) {
+            // إذا كان الكورس مجدولاً، اذهب للدرس الأول
+            navigate(`/lesson/${course.id}_1_1`)
+        } else {
+            // إذا كان جديداً، اذهب لصفحة بناء الجدول (Setup)
+            navigate('/course-setup', { state: { courseId: course.id } })
+        }
+    }
+
+    const startEdit = (course) => {
+        setIsEditMode(course.id)
+        setEditForm({ title: course.title, description: course.description })
+    }
+
+    const saveEdit = (courseId) => {
+        updateCourse(courseId, editForm)
+        setIsEditMode(null)
+    }
 
     return (
         <>
             <Navbar />
-            <div className="min-h-screen bg-slate-950 text-white py-24 px-4 md:px-6 overflow-hidden">
-                <div className="max-w-5xl mx-auto">
-                    
-                    {/* رأس الصفحة */}
-                    <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
+            <div className="min-h-screen bg-slate-950 text-white py-24 px-6 relative">
+                <div className="max-w-7xl mx-auto">
+                    {/* Header */}
+                    <div className="flex justify-between items-end mb-12">
                         <div>
-                            <div className="flex items-center gap-3 mb-2">
-                                <span className="bg-neon-blue/20 text-neon-blue p-2 rounded-lg"><Calendar className="w-6 h-6" /></span>
-                                <h1 className="text-3xl md:text-4xl font-bold">جدولك اليومي</h1>
-                            </div>
-                            <p className="text-gray-400 max-w-lg">
-                                خطة مخصصة بناءً على تحليلك: <span className="text-white font-mono">5 ساعات</span> تركيز لليوم.
-                            </p>
-                        </div>
-                        
-                        <div className="glass px-6 py-4 rounded-2xl border border-white/10 flex items-center gap-6">
-                            <div className="text-center">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">اليوم</div>
-                                <div className="text-2xl font-bold text-neon-violet">01</div>
-                            </div>
-                            <div className="w-px h-8 bg-white/10" />
-                            <div className="text-center">
-                                <div className="text-xs text-gray-500 uppercase tracking-wider mb-1">المتبقي</div>
-                                <div className="text-2xl font-bold text-white">09</div>
-                            </div>
+                            <h1 className="text-5xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-neon-blue to-neon-violet">
+                                مكتبة المسارات
+                            </h1>
+                            <p className="text-xl text-gray-400">إدارة مساراتك التعليمية وتوليد مسارات جديدة بالذكاء الاصطناعي</p>
                         </div>
                     </div>
 
-                    {/* حاوية الخط الزمني */}
-                    <div className="relative pl-4 md:pl-0">
-                        {/* الخط الرأسي المركزي */}
-                        <div className="absolute left-4 md:left-1/2 top-0 bottom-0 w-[2px] bg-slate-800 md:transform md:-translate-x-1/2">
-                            <div ref={timelineRef} className="w-full bg-gradient-to-b from-neon-blue via-neon-violet to-slate-800 shadow-[0_0_10px_rgba(0,217,255,0.5)]" />
-                        </div>
+                    {/* Courses Grid */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                        
+                        {/* 1. زر إضافة كورس جديد (Create) */}
+                        <button 
+                            onClick={() => setIsModalOpen(true)}
+                            className="group relative h-full min-h-[350px] border-2 border-dashed border-white/20 rounded-3xl flex flex-col items-center justify-center gap-4 hover:border-neon-blue hover:bg-neon-blue/5 transition-all duration-300"
+                        >
+                            <div className="w-20 h-20 rounded-full bg-white/10 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg shadow-neon-blue/10">
+                                <Plus className="w-10 h-10 text-white group-hover:text-neon-blue transition-colors" />
+                            </div>
+                            <span className="text-xl font-bold text-gray-400 group-hover:text-neon-blue transition-colors">
+                                توليد مسار ذكي جديد
+                            </span>
+                            <p className="text-sm text-gray-500 px-8 text-center">أدخل أي مهارة، وسيقوم الـ AI ببناء المنهج لك</p>
+                        </button>
 
-                        <div className="space-y-12 md:space-y-24">
-                            {todaySchedule.map((item, index) => {
-                                const isLesson = item.type === 'lesson'
-                                const data = isLesson ? getLessonData(item.courseId, item.lessonIndex) : item
-                                const isLocked = item.status === 'locked'
-                                const isCurrent = item.status === 'current'
-                                const isCompleted = item.status === 'completed'
-                                const isUnlocked = item.status === 'unlocked'
-                                const isRight = index % 2 === 0 // لتبديل الجهات في الديسك توب
+                        {/* 2. عرض الكورسات (Read, Update, Delete) */}
+                        {courses.map((course, idx) => {
+                            const isEditing = isEditMode === course.id
+                            const isScheduled = course.isScheduled
 
-                                return (
-                                    <div 
-                                        key={index}
-                                        ref={el => cardsRef.current[index] = el}
-                                        className={`relative flex flex-col md:flex-row items-start md:items-center ${isRight ? 'md:flex-row' : 'md:flex-row-reverse'} md:gap-16 pl-12 md:pl-0`}
-                                    >
-                                        {/* نقطة الاتصال على الخط */}
-                                        <div className={`absolute left-0 md:left-1/2 w-9 h-9 rounded-full border-[3px] md:transform md:-translate-x-1/2 z-10 flex items-center justify-center transition-all duration-500 top-0 md:top-auto
-                                            ${isCompleted ? 'bg-slate-950 border-green-500 shadow-[0_0_15px_rgba(34,197,94,0.6)]' : 
-                                              isCurrent || (isUnlocked && item.isFinal) ? 'bg-neon-blue border-white animate-pulse shadow-[0_0_20px_rgba(0,217,255,0.6)]' : 
-                                              'bg-slate-900 border-slate-700'}
-                                        `}>
-                                            {isCompleted && <CheckCircle className="w-4 h-4 text-green-500" />}
-                                            {(isCurrent || (isUnlocked && item.isFinal)) && <div className="w-2 h-2 bg-white rounded-full" />}
-                                            {isLocked && <Lock className="w-3 h-3 text-slate-500" />}
-                                        </div>
-
-                                        {/* الوقت (يظهر في الجانب المقابل للكارت) */}
-                                        <div className={`hidden md:block w-1/2 text-gray-500 font-mono text-lg ${isRight ? 'text-right' : 'text-left'}`}>
-                                            {item.time}
-                                        </div>
-
-                                        {/* كارت المحتوى */}
-                                        <div className="w-full md:w-1/2">
-                                            <div 
-                                                onClick={() => {
-                                                    if (isLocked) return;
-                                                    if (item.isFinal) {
-                                                        navigate('/assessment?mode=final')
-                                                    } else if (isLesson) {
-                                                        navigate(`/lesson/${handleLessonParams(item.courseId, item.lessonIndex)}`)
-                                                    }
-                                                }}
-                                                className={`group relative p-6 rounded-2xl border transition-all duration-300 overflow-hidden
-                                                    ${isLocked 
-                                                        ? 'bg-slate-900/30 border-white/5 opacity-60 cursor-not-allowed grayscale' 
-                                                        : 'glass border-white/10 hover:border-neon-blue/30 cursor-pointer hover:-translate-y-1 hover:shadow-2xl hover:shadow-neon-blue/10'
-                                                    }
-                                                    ${isCurrent ? 'ring-1 ring-neon-blue/50 bg-neon-blue/5' : ''}
-                                                    ${item.isFinal ? 'border-neon-violet/30' : ''}
-                                                `}
+                            return (
+                                <AnimatedCard
+                                    key={course.id}
+                                    ref={(el) => (cardsRef.current[idx] = el)}
+                                    className="glass rounded-3xl overflow-hidden border border-white/10 flex flex-col h-full hover:border-white/30 transition-colors"
+                                >
+                                    {/* Cover Image Area */}
+                                    <div className={`relative h-48 bg-gradient-to-br ${course.difficulty === 'beginner' ? 'from-green-500/20' : 'from-purple-500/20'} to-slate-900 flex items-center justify-center overflow-hidden group`}>
+                                        
+                                        {/* صورة الخلفية (إن وجدت) أو لون متدرج */}
+                                        <div className="absolute inset-0 bg-slate-900 opacity-50 z-0"></div>
+                                        
+                                        {/* أزرار التحكم (تظهر عند التحويم) */}
+                                        <div className="absolute top-4 right-4 flex gap-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform translate-y-2 group-hover:translate-y-0">
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); startEdit(course); }}
+                                                className="p-2 rounded-full bg-black/60 hover:bg-neon-blue text-white transition-colors backdrop-blur-md"
+                                                title="تعديل"
                                             >
-                                                {/* خلفية جمالية للكارت النهائي */}
-                                                {item.isFinal && !isLocked && (
-                                                    <div className="absolute inset-0 bg-gradient-to-r from-neon-violet/10 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
-                                                )}
-
-                                                {/* شارة الوقت للموبايل */}
-                                                <div className="md:hidden text-xs font-mono text-gray-500 mb-2 flex items-center gap-2">
-                                                    <Clock className="w-3 h-3" />
-                                                    {item.time}
-                                                </div>
-
-                                                {/* العنوان والنوع */}
-                                                <div className="flex items-start justify-between mb-3">
-                                                    <h3 className={`text-lg font-bold ${item.isFinal ? 'text-xl bg-gradient-to-r from-white to-gray-300 bg-clip-text text-transparent' : 'text-white'}`}>
-                                                        {isLesson ? t(data.title) : item.title}
-                                                    </h3>
-                                                    {item.isFinal && <Trophy className="w-6 h-6 text-neon-violet animate-bounce" />}
-                                                </div>
-
-                                                {/* تفاصيل */}
-                                                <div className="flex items-center gap-4 text-sm text-gray-400">
-                                                    <div className="flex items-center gap-1.5">
-                                                        {item.isFinal ? <Star className="w-4 h-4 text-yellow-500" /> : <Clock className="w-4 h-4" />}
-                                                        <span>{item.isFinal ? 'اختبار شامل' : data.duration || '15m'}</span>
-                                                    </div>
-                                                    <div className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider border ${
-                                                        item.type === 'quiz' ? 'border-yellow-500/30 text-yellow-500' :
-                                                        item.type === 'assignment' ? 'border-neon-violet/30 text-neon-violet' :
-                                                        'border-neon-blue/30 text-neon-blue'
-                                                    }`}>
-                                                        {item.type}
-                                                    </div>
-                                                </div>
-
-                                                {/* زر الإجراء */}
-                                                {!isLocked && (
-                                                    <div className="mt-4 pt-4 border-t border-white/5 flex justify-end">
-                                                        <span className={`text-xs font-bold flex items-center gap-1 transition-colors ${item.isFinal ? 'text-neon-violet' : 'text-neon-blue group-hover:text-white'}`}>
-                                                            {isCompleted ? 'مراجعة' : 'ابدأ الآن'} <PlayCircle className="w-4 h-4" />
-                                                        </span>
-                                                    </div>
-                                                )}
-                                            </div>
+                                                <Edit2 className="w-4 h-4" />
+                                            </button>
+                                            <button 
+                                                onClick={(e) => { e.stopPropagation(); deleteCourse(course.id); }}
+                                                className="p-2 rounded-full bg-black/60 hover:bg-red-500 text-white transition-colors backdrop-blur-md"
+                                                title="حذف"
+                                            >
+                                                <Trash2 className="w-4 h-4" />
+                                            </button>
                                         </div>
+
+                                        <BookOpen className="w-20 h-20 text-white/10 absolute -bottom-6 -left-6 rotate-12 z-0" />
+                                        <div className="z-10 text-5xl">
+                                            {course.difficulty === 'advanced' ? '🚀' : course.difficulty === 'intermediate' ? '⚡' : '🌱'}
+                                        </div>
+                                        
+                                        {/* شارة الحالة */}
+                                        {isScheduled && (
+                                            <div className="absolute bottom-4 left-4 flex items-center gap-1 bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-bold border border-green-500/30 backdrop-blur-sm">
+                                                <CheckCircle className="w-3 h-3" />
+                                                نشط في الجدول
+                                            </div>
+                                        )}
                                     </div>
-                                )
-                            })}
-                        </div>
+
+                                    {/* Content Area */}
+                                    <div className="p-6 flex-1 flex flex-col">
+                                        {isEditing ? (
+                                            <div className="space-y-3 mb-auto">
+                                                <input 
+                                                    value={editForm.title}
+                                                    onChange={(e) => setEditForm({...editForm, title: e.target.value})}
+                                                    className="w-full bg-white/10 rounded-lg p-3 text-white border border-neon-blue focus:outline-none"
+                                                    autoFocus
+                                                />
+                                                <textarea 
+                                                    value={editForm.description}
+                                                    onChange={(e) => setEditForm({...editForm, description: e.target.value})}
+                                                    className="w-full bg-white/10 rounded-lg p-3 text-white text-sm border border-neon-blue h-24 resize-none focus:outline-none"
+                                                />
+                                                <div className="flex gap-2 justify-end">
+                                                    <button onClick={() => setIsEditMode(null)} className="p-2 rounded-lg bg-red-500/20 text-red-400 hover:bg-red-500/30"><X className="w-4 h-4"/></button>
+                                                    <button onClick={() => saveEdit(course.id)} className="p-2 rounded-lg bg-green-500/20 text-green-400 hover:bg-green-500/30"><Save className="w-4 h-4"/></button>
+                                                </div>
+                                            </div>
+                                        ) : (
+                                            <>
+                                                <h3 className="text-2xl font-bold mb-2 truncate" title={course.title}>{course.title}</h3>
+                                                <p className="text-gray-400 mb-6 text-sm line-clamp-3 leading-relaxed">{course.description}</p>
+                                                
+                                                <div className="mt-auto">
+                                                    <div className="flex items-center gap-4 mb-6 text-sm text-gray-500 font-mono">
+                                                        <div className="flex items-center gap-1.5">
+                                                            <Clock className="w-4 h-4 text-neon-blue" />
+                                                            <span>{course.duration || 'غير محدد'}</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-1.5">
+                                                            <BookOpen className="w-4 h-4 text-neon-violet" />
+                                                            <span>{course.lessonsCount || 0} دروس</span>
+                                                        </div>
+                                                    </div>
+
+                                                    <button
+                                                        onClick={() => handleCourseAction(course)}
+                                                        className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
+                                                            isScheduled
+                                                            ? 'bg-green-600 hover:bg-green-500 text-white shadow-green-900/20' 
+                                                            : 'bg-gradient-to-r from-neon-blue to-neon-violet text-white hover:scale-[1.02] shadow-neon-blue/20'
+                                                        }`}
+                                                    >
+                                                        {isScheduled ? (
+                                                            <>متابعة التعلم <PlayCircle className="w-5 h-5" /></>
+                                                        ) : (
+                                                            <>رسم المسار والجدول <Calendar className="w-5 h-5" /></>
+                                                        )}
+                                                    </button>
+                                                </div>
+                                            </>
+                                        )}
+                                    </div>
+                                </AnimatedCard>
+                            )
+                        })}
                     </div>
                 </div>
+
+                {/* Add Course Modal */}
+                {isModalOpen && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-md p-4">
+                        <div className="glass w-full max-w-lg p-10 rounded-3xl border border-white/20 relative animate-slide-up shadow-2xl">
+                            <button 
+                                onClick={() => !isAnalyzing && setIsModalOpen(false)}
+                                className="absolute top-6 right-6 p-2 hover:bg-white/10 rounded-full transition-colors text-gray-400 hover:text-white"
+                            >
+                                <X className="w-6 h-6" />
+                            </button>
+
+                            <div className="text-center mb-8">
+                                <div className="w-16 h-16 bg-neon-blue/20 rounded-full flex items-center justify-center mx-auto mb-4">
+                                    <BookOpen className="w-8 h-8 text-neon-blue" />
+                                </div>
+                                <h2 className="text-3xl font-bold mb-2">توليد مسار جديد</h2>
+                                <p className="text-gray-400">اكتب الموضوع، وسيقوم الـ AI ببناء الهيكل الكامل للكورس.</p>
+                            </div>
+
+                            <form onSubmit={handleAddCourse}>
+                                <div className="mb-8">
+                                    <input 
+                                        type="text"
+                                        placeholder="مثلاً: Python for Data Science, React Native..."
+                                        className="w-full bg-slate-900/80 border border-white/20 rounded-xl p-5 text-white text-lg placeholder-gray-500 focus:border-neon-blue focus:ring-1 focus:ring-neon-blue outline-none transition-all text-center"
+                                        value={newTopic}
+                                        onChange={(e) => setNewTopic(e.target.value)}
+                                        autoFocus
+                                    />
+                                </div>
+
+                                <button 
+                                    type="submit"
+                                    disabled={isAnalyzing || !newTopic}
+                                    className="w-full py-4 rounded-xl bg-gradient-to-r from-neon-blue to-neon-violet font-bold text-lg hover:scale-[1.02] transition-transform disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-3 shadow-lg shadow-neon-blue/20"
+                                >
+                                    {isAnalyzing ? (
+                                        <>
+                                            <Loader className="w-5 h-5 animate-spin" />
+                                            جاري الاتصال بالذكاء الاصطناعي...
+                                        </>
+                                    ) : (
+                                        'توليد الكورس فوراً'
+                                    )}
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </div>
         </>
     )

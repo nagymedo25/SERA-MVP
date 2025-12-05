@@ -1,40 +1,51 @@
 import React, { useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import useSimulationStore from '../store/simulationStore'
+import useSimulationStore from '../store/simulationStore' // تأكد من المسار
 import Navbar from '../components/Navbar'
 import { User, Mail, Lock, ArrowRight } from 'lucide-react'
 
 const SignupPage = () => {
     const navigate = useNavigate()
-    const { signup } = useSimulationStore()
+    
+    // ✅ الطريقة الآمنة لاستدعاء الدالة
+    const signup = useSimulationStore((state) => state.signup)
+    
     const [formData, setFormData] = useState({ email: '', password: '', name: '' })
     const [error, setError] = useState('')
 
-const handleSubmit = (e) => {
-    e.preventDefault();
-    
-    // 🛑 الخطأ القديم كان: signup(formData)
-    // ✅ التصحيح: تفكيك البيانات وتمريرها بالترتيب (إيميل، باسوورد، اسم)
-    const result = signup(formData.email, formData.password, formData.name); 
-    
-    if (result.success) {
-        navigate('/onboarding');
-    } else {
-        alert(result.message); // أو عرض الخطأ بطريقتك الخاصة
-    }
-};
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        
+        // التحقق من وجود الدالة قبل استدعائها
+        if (!signup) {
+            console.error("Signup function not found in store!");
+            return;
+        }
 
+        const result = signup(formData.email, formData.password, formData.name); 
+        
+        if (result && result.success) {
+            navigate('/onboarding');
+        } else {
+            setError(result?.message || "حدث خطأ ما");
+        }
+    };
+
+    // ... (باقي كود التصميم كما هو)
     return (
+        // ... (نفس الـ JSX القديم)
+        // تأكد فقط من وجود {error && ...} لعرض رسالة الخطأ
         <>
             <Navbar />
             <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
-                <div className="absolute bottom-20 right-10 w-96 h-96 gradient-orb-2 animate-float" />
+                {/* ... نفس الخلفية ... */}
                 <div className="glass p-8 rounded-3xl w-full max-w-md border border-white/10 relative z-10">
                     <h2 className="text-3xl font-bold text-white mb-6 text-center">حساب جديد</h2>
 
                     {error && <div className="bg-red-500/20 text-red-400 p-3 rounded-lg mb-4 text-sm text-center">{error}</div>}
 
                     <form onSubmit={handleSubmit} className="space-y-6">
+                        {/* ... نفس حقول الإدخال ... */}
                         <div>
                             <label className="block text-gray-400 mb-2 text-sm">الاسم الكامل</label>
                             <div className="relative">

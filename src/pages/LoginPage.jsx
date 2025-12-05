@@ -6,23 +6,29 @@ import { Mail, Lock, LogIn } from 'lucide-react'
 
 const LoginPage = () => {
     const navigate = useNavigate()
-    const { login } = useSimulationStore()
+    
+    // ✅ الطريقة الآمنة لاستدعاء الدالة
+    const login = useSimulationStore((state) => state.login)
+    
     const [formData, setFormData] = useState({ email: '', password: '' })
     const [error, setError] = useState('')
 
-const handleSubmit = (e) => {
-    e.preventDefault();
+    const handleSubmit = (e) => {
+        e.preventDefault();
+        
+        if (!login) {
+            console.error("Login function not found!");
+            return;
+        }
 
-    // 🛑 الخطأ القديم كان: login(formData)
-    // ✅ التصحيح: تمرير الإيميل والباسوورد فقط كمتغيرات منفصلة
-    const result = login(formData.email, formData.password);
-    
-    if (result.success) {
-        navigate('/dashboard');
-    } else {
-        alert(result.message);
-    }
-};
+        const result = login(formData.email, formData.password);
+        
+        if (result && result.success) {
+            navigate('/dashboard');
+        } else {
+            setError(result?.message || "البريد أو كلمة المرور خطأ");
+        }
+    };
 
     return (
         <>
