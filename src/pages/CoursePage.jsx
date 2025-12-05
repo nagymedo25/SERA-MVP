@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import gsap from 'gsap'
-import { BookOpen, Clock, Plus, Trash2, Edit2, PlayCircle, Loader, X, Save, Calendar, CheckCircle, MapPin } from 'lucide-react'
+import { BookOpen, Clock, Plus, Trash2, Edit2, PlayCircle, Loader, X, Save, Calendar, CheckCircle, MapPin, Award, Lock } from 'lucide-react'
 import { useNavigate } from 'react-router-dom'
 import Navbar from '../components/Navbar'
 import AnimatedCard from '../components/AnimatedCard'
@@ -9,12 +9,7 @@ import useSimulationStore from '../store/simulationStore'
 const CoursePage = () => {
     const navigate = useNavigate()
     const { 
-        courses, 
-        addNewCourseAI, 
-        deleteCourse, 
-        updateCourse, 
-        enrolledCourses,
-        isAnalyzing 
+        courses, addNewCourseAI, deleteCourse, updateCourse, isAnalyzing 
     } = useSimulationStore()
 
     const [isModalOpen, setIsModalOpen] = useState(false)
@@ -41,10 +36,9 @@ const CoursePage = () => {
         setIsModalOpen(false);
     }
 
-    // ✅ دالة التوجيه المصححة
     const openJourney = (course) => {
         if (course.isScheduled) {
-            navigate(`/journey/${course.id}`) // التوجيه لصفحة الرحلة
+            navigate(`/journey/${course.id}`)
         } else {
             navigate('/course-setup', { state: { courseId: course.id } })
         }
@@ -89,24 +83,53 @@ const CoursePage = () => {
                         {courses.map((course, idx) => {
                             const isScheduled = course.isScheduled
                             const isEditing = isEditMode === course.id
+                            const isCertified = course.hasCertificate // ✅ التحقق من الشهادة
 
                             return (
                                 <AnimatedCard
                                     key={course.id}
                                     ref={(el) => (cardsRef.current[idx] = el)}
-                                    className="glass rounded-3xl overflow-hidden border border-white/10 flex flex-col h-full hover:border-white/30 transition-colors"
+                                    // تغيير الستايل للكروت الذهبية
+                                    className={`
+                                        rounded-3xl overflow-hidden flex flex-col h-full transition-all duration-500
+                                        ${isCertified 
+                                            ? 'bg-gradient-to-br from-yellow-900/40 to-amber-900/20 border border-yellow-500/50 shadow-[0_0_30px_rgba(234,179,8,0.1)] hover:shadow-[0_0_50px_rgba(234,179,8,0.2)] hover:scale-[1.02]' 
+                                            : 'glass border border-white/10 hover:border-white/30'
+                                        }
+                                    `}
                                 >
-                                    <div className={`relative h-48 bg-gradient-to-br ${course.difficulty === 'beginner' ? 'from-green-500/20' : 'from-purple-500/20'} to-slate-900 flex items-center justify-center overflow-hidden group`}>
+                                    <div className={`relative h-48 flex items-center justify-center overflow-hidden group 
+                                        ${isCertified 
+                                            ? 'bg-gradient-to-br from-yellow-500/20 to-orange-600/20' 
+                                            : course.difficulty === 'beginner' ? 'bg-gradient-to-br from-green-500/20 to-slate-900' : 'bg-gradient-to-br from-purple-500/20 to-slate-900'
+                                        }`}>
+                                        
                                         <div className="absolute inset-0 bg-slate-900 opacity-50 z-0"></div>
-                                        <div className="absolute top-4 right-4 flex gap-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={(e) => { e.stopPropagation(); startEdit(course); }} className="p-2 rounded-full bg-black/60 hover:bg-neon-blue text-white"><Edit2 className="w-4 h-4" /></button>
-                                            <button onClick={(e) => { e.stopPropagation(); deleteCourse(course.id); }} className="p-2 rounded-full bg-black/60 hover:bg-red-500 text-white"><Trash2 className="w-4 h-4" /></button>
-                                        </div>
-                                        <BookOpen className="w-20 h-20 text-white/10 absolute -bottom-6 -left-6 rotate-12 z-0" />
-                                        <div className="z-10 text-5xl">{course.difficulty === 'advanced' ? '🚀' : '🌱'}</div>
-                                        {isScheduled && (
+                                        
+                                        {/* أزرار التحكم (تختفي إذا كان هناك شهادة) */}
+                                        {!isCertified && (
+                                            <div className="absolute top-4 right-4 flex gap-2 z-20 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                <button onClick={(e) => { e.stopPropagation(); startEdit(course); }} className="p-2 rounded-full bg-black/60 hover:bg-neon-blue text-white"><Edit2 className="w-4 h-4" /></button>
+                                                <button onClick={(e) => { e.stopPropagation(); deleteCourse(course.id); }} className="p-2 rounded-full bg-black/60 hover:bg-red-500 text-white"><Trash2 className="w-4 h-4" /></button>
+                                            </div>
+                                        )}
+
+                                        {isCertified ? (
+                                            <Award className="w-24 h-24 text-yellow-400 drop-shadow-[0_0_15px_rgba(250,204,21,0.8)] z-10 animate-pulse" />
+                                        ) : (
+                                            <BookOpen className="w-20 h-20 text-white/10 absolute -bottom-6 -left-6 rotate-12 z-0" />
+                                        )}
+                                        
+                                        {!isCertified && <div className="z-10 text-5xl">{course.difficulty === 'advanced' ? '🚀' : '🌱'}</div>}
+                                        
+                                        {isScheduled && !isCertified && (
                                             <div className="absolute bottom-4 left-4 flex items-center gap-1 bg-green-500/20 text-green-400 px-3 py-1 rounded-full text-xs font-bold border border-green-500/30 backdrop-blur-sm">
                                                 <CheckCircle className="w-3 h-3" /> نشط في الجدول
+                                            </div>
+                                        )}
+                                        {isCertified && (
+                                            <div className="absolute bottom-4 left-4 flex items-center gap-1 bg-yellow-500/20 text-yellow-400 px-3 py-1 rounded-full text-xs font-bold border border-yellow-500/30 backdrop-blur-sm">
+                                                <Award className="w-3 h-3" /> شهادة موثقة
                                             </div>
                                         )}
                                     </div>
@@ -119,18 +142,20 @@ const CoursePage = () => {
                                             </div>
                                         ) : (
                                             <>
-                                                <h3 className="text-2xl font-bold mb-2 truncate">{course.title}</h3>
+                                                <h3 className={`text-2xl font-bold mb-2 truncate ${isCertified ? 'text-yellow-100' : 'text-white'}`}>{course.title}</h3>
                                                 <p className="text-gray-400 mb-6 text-sm line-clamp-3">{course.description}</p>
                                                 <div className="mt-auto">
                                                     <button
                                                         onClick={() => openJourney(course)}
                                                         className={`w-full py-4 rounded-xl font-bold flex items-center justify-center gap-2 transition-all shadow-lg ${
-                                                            isScheduled
-                                                            ? 'bg-green-600 hover:bg-green-500 text-white shadow-green-900/20' 
-                                                            : 'bg-gradient-to-r from-neon-blue to-neon-violet text-white hover:scale-[1.02] shadow-neon-blue/20'
+                                                            isCertified 
+                                                            ? 'bg-gradient-to-r from-yellow-500 to-orange-600 text-white hover:scale-[1.02] shadow-yellow-500/20'
+                                                            : isScheduled
+                                                                ? 'bg-green-600 hover:bg-green-500 text-white shadow-green-900/20' 
+                                                                : 'bg-gradient-to-r from-neon-blue to-neon-violet text-white hover:scale-[1.02] shadow-neon-blue/20'
                                                         }`}
                                                     >
-                                                        {isScheduled ? (<>رحلتك التعليمية <MapPin className="w-5 h-5" /></>) : (<>رسم المسار والجدول <Calendar className="w-5 h-5" /></>)}
+                                                        {isCertified ? (<>عرض الشهادة والمسار <Award className="w-5 h-5" /></>) : isScheduled ? (<>رحلتك التعليمية <MapPin className="w-5 h-5" /></>) : (<>رسم المسار والجدول <Calendar className="w-5 h-5" /></>)}
                                                     </button>
                                                 </div>
                                             </>

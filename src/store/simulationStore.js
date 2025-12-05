@@ -1,7 +1,6 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import * as AI from '../services/gemini'
-import { coursesData as defaultCourses } from '../data/mockData' // بيانات احتياطية للبداية
 
 const useSimulationStore = create(
     persist(
@@ -11,87 +10,143 @@ const useSimulationStore = create(
             // =================================================
             user: null,
             registeredUsers: [],
-            
-            // إدارة الكورسات
-            courses: defaultCourses || [], // قائمة الكورسات (الافتراضية + المولدة)
-            enrolledCourses: [], // الكورسات التي اشترك فيها المستخدم
-            
-            // بيانات التعلم والتقدم
+            courses: [], 
+            enrolledCourses: [], 
             completedLessons: [],
             assessmentHistory: [],
-            dailyTasks: [], // المهام اليومية من الـ AI
+            dailyTasks: [], 
             
-            // حالات واجهة المستخدم والتحميل
-            isAnalyzing: false, // لعمليات التوليد الطويلة
+            // حالات واجهة المستخدم
+            isAnalyzing: false, 
             isGeneratingQuestions: false,
             isEvaluating: false,
-            showBreathingExercise: false, // للتدخل النفسي
-            currentMode: 'neutral', // neutral, highFocus, burnout, anxiety
-
-            // حالات التقييم الذكي
+            showBreathingExercise: false, 
+            currentMode: 'neutral',
+            
+            // حالات التقييم والامتحانات
             currentAssessmentQuestions: [],
             assessmentSession: [],
+            onboardingQuestions: [],
+            
+            // ✅ حالة التقرير النهائي (Exam)
+            finalReport: null,
+            // ✅ حالة نتيجة الـ Onboarding (نقلت للستور لدعم المطور)
+            onboardingResult: null,
 
             // =================================================
-            // 2. إدارة الكورسات (Course CRUD & AI)
+            // 2. وظائف المطور (Dev Tools) - المحدثة
             // =================================================
-            
-            // إضافة كورس جديد بالذكاء الاصطناعي
+            forcePassExam: () => {
+                const { user, courses } = get();
+
+                // 🅰️ سيناريو 1: المستخدم في مرحلة الـ Onboarding
+                if (user && !user.hasCompletedOnboarding) {
+                    const fakeExpertProfile = {
+                        mindprint: { traits: { focus: 95, resilience: 90, openness: 85 } },
+                        codingGenome: { level: 'advanced', strengths: ['Algorithms', 'System Design', 'React'], problemSolvingScore: 98 },
+                        lifeTrajectory: { goal: 'Senior Architect', timeframe: 'Immediate', field: 'Full Stack' },
+                        recommendation: {
+                            isEligibleForExam: true,
+                            reason: "Developer Override: تم رصد مستوى خبير. تجاوز المسار التعليمي."
+                        }
+                    };
+
+                    set(state => {
+                        const updatedUser = { 
+                            ...state.user, 
+                            hasCompletedOnboarding: true,
+                            ...fakeExpertProfile
+                        };
+                        return {
+                            user: updatedUser,
+                            onboardingResult: fakeExpertProfile.recommendation, // ✅ تحديث النتيجة لتظهر في الصفحة
+                            isAnalyzing: false,
+                            isGeneratingQuestions: false
+                        };
+                    });
+                    return; // إنهاء الدالة هنا
+                }
+
+                // 🅱️ سيناريو 2: المستخدم في كورس (المنطق السابق)
+                const activeCourse = courses.find(c => c.isScheduled) || courses[0];
+                if (!activeCourse) return;
+
+                const fakeSuccessReport = {
+                    score: 100,       
+                    finalScore: 100,
+                    passed: true,
+                    summary: "Developer Override: Outstanding performance demonstrated across all modules.",
+                    feedback: "تم اجتياز الاختبار بنجاح تام عبر وضع المطور. الأداء مثالي.",
+                    emotionalState: "Confident"
+                };
+
+                set(state => {
+                    const newHistory = {
+                        date: new Date().toISOString(),
+                        type: 'Dev Override',
+                        courseTitle: activeCourse.title,
+                        score: 100,
+                        passed: true,
+                        summary: fakeSuccessReport.summary
+                    };
+
+                    const updatedCourses = state.courses.map(c => 
+                        c.id === activeCourse.id 
+                        ? { ...c, hasCertificate: true, completedAt: new Date().toISOString() } 
+                        : c
+                    );
+
+                    return {
+                        assessmentHistory: [...state.assessmentHistory, newHistory],
+                        courses: updatedCourses,
+                        finalReport: fakeSuccessReport,
+                        isAnalyzing: false,
+                        isGeneratingQuestions: false
+                    };
+                });
+            },
+
+            clearFinalReport: () => set({ finalReport: null }),
+            // دالة لتنظيف الـ Onboarding عند الخروج
+            clearOnboardingResult: () => set({ onboardingResult: null }),
+
+            // =================================================
+            // 3. إدارة الكورسات وباقي الدوال (كما هي)
+            // =================================================
             addNewCourseAI: async (topic) => {
                 set({ isAnalyzing: true });
                 const newCourse = await AI.generateNewCourseAI(topic);
-                
                 if (newCourse) {
-                    // إضافة صورة عشوائية لجمالية التصميم
                     newCourse.image = `/course-${Math.floor(Math.random() * 3) + 1}.jpg`;
-                    // علامة لتحديد أن هذا الكورس لم تتم جدولته بعد
                     newCourse.isScheduled = false; 
-                    
-                    set(state => ({
-                        courses: [newCourse, ...state.courses],
-                        isAnalyzing: false
-                    }));
+                    set(state => ({ courses: [newCourse, ...state.courses], isAnalyzing: false }));
                     return true;
                 }
                 set({ isAnalyzing: false });
                 return false;
             },
 
-            // حذف كورس
             deleteCourse: (courseId) => {
                 set(state => ({
-                    courses: state.courses.filter(c => c.id !== courseId),
+                    courses: state.courses.filter(c => c.id !== courseId || !c.hasCertificate),
                     enrolledCourses: state.enrolledCourses.filter(id => id !== courseId)
                 }));
             },
 
-            // تعديل بيانات كورس
             updateCourse: (courseId, updatedData) => {
                 set(state => ({
-                    courses: state.courses.map(c => 
-                        c.id === courseId ? { ...c, ...updatedData } : c
-                    )
+                    courses: state.courses.map(c => c.id === courseId ? { ...c, ...updatedData } : c)
                 }));
             },
 
-            // توليد جدول زمني ذكي للكورس (ربط الكورس بروتين المستخدم)
             generateCourseSchedule: async (courseId, routineDescription) => {
                 const { user, courses } = get();
                 const course = courses.find(c => c.id === courseId);
-                
                 if (!course) return false;
-
-                // استدعاء Gemini لدمج الكورس مع الروتين
                 const schedule = await AI.generateCourseScheduleAI(course, routineDescription, user);
-
                 if (schedule) {
                     set(state => ({
-                        courses: state.courses.map(c => 
-                            c.id === courseId 
-                            ? { ...c, schedule: schedule, isScheduled: true } // حفظ الجدول وتحديث الحالة
-                            : c
-                        ),
-                        // تسجيل المستخدم في الكورس تلقائياً بعد الجدولة
+                        courses: state.courses.map(c => c.id === courseId ? { ...c, schedule: schedule, isScheduled: true } : c),
                         enrolledCourses: [...state.enrolledCourses, courseId]
                     }));
                     return true;
@@ -99,212 +154,150 @@ const useSimulationStore = create(
                 return false;
             },
 
-            // دالة إكمال الدرس (تفتح الدرس التالي)
             completeLesson: (lessonId) => {
-                // lessonId format: "courseId_1_lessonIndex"
-                // نقوم بفصل الأجزاء لمعرفة الدرس الحالي والكورس
                 const parts = lessonId.split('_');
                 const lessonIndexStr = parts.pop(); 
-                const unitIndexStr = parts.pop();   
                 const courseId = parts.join('_');   
-                
-                const lIdx = parseInt(lessonIndexStr); // رقم الدرس الحالي (يبدأ من 1 حسب الرابط)
-
+                const lIdx = parseInt(lessonIndexStr); 
                 set(state => {
-                    // إضافة الدرس لقائمة المكتملات
                     const newCompleted = [...state.completedLessons, lessonId];
-                    
-                    // تحديث حالة الـ Roadmap داخل الكورس لفتح الدرس التالي
                     const updatedCourses = state.courses.map(c => {
                         if (c.id !== courseId || !c.schedule) return c;
-                        
                         const newRoadmap = c.schedule.roadmap.map(node => {
-                            // إذا كان هذا هو الدرس التالي للدرس المكتمل، اجعله unlocked
-                            // node.lessonIndex يبدأ من 0
-                            // lIdx هو رقم الدرس الحالي الذي اكتمل (مثلاً 1)
-                            // الدرس التالي هو في الاندكس lIdx
-                            if (node.lessonIndex === lIdx) { 
-                                return { ...node, status: 'unlocked' };
-                            }
-                             // تعليم الدرس الحالي كمكتمل
-                            if (node.lessonIndex === lIdx - 1) {
-                                return { ...node, status: 'completed' };
-                            }
+                            if (node.lessonIndex === lIdx) return { ...node, status: 'unlocked' };
+                            if (node.lessonIndex === lIdx - 1) return { ...node, status: 'completed' };
                             return node;
                         });
-
                         return { ...c, schedule: { ...c.schedule, roadmap: newRoadmap } };
                     });
-
-                    return { 
-                        completedLessons: newCompleted,
-                        courses: updatedCourses
-                    };
+                    return { completedLessons: newCompleted, courses: updatedCourses };
                 });
             },
 
-             // دالة محاكاة إكمال الدرس (Skip/Fast Forward)
              simulateCompleteLesson: (courseId, lessonIndex) => {
-                const lessonId = `${courseId}_1_${lessonIndex + 1}`; // توحيد صيغة الـ ID
-                
+                const lessonId = `${courseId}_1_${lessonIndex + 1}`; 
                 set(state => {
-                    // 1. إضافته للمكتملة
                     const newCompleted = [...state.completedLessons, lessonId];
-                    
-                    // 2. تحديث حالة الخريطة (Roadmap)
                     const updatedCourses = state.courses.map(c => {
                         if (c.id !== courseId || !c.schedule) return c;
-                        
                         const newRoadmap = c.schedule.roadmap.map(node => {
-                            // الدرس الحالي يصبح مكتمل
-                            if (node.lessonIndex === lessonIndex) {
-                                return { ...node, status: 'completed' };
-                            }
-                            // الدرس التالي يصبح مفتوح
-                            if (node.lessonIndex === lessonIndex + 1) {
-                                return { ...node, status: 'unlocked' }; // أو 'current'
-                            }
+                            if (node.lessonIndex === lessonIndex) return { ...node, status: 'completed' };
+                            if (node.lessonIndex === lessonIndex + 1) return { ...node, status: 'unlocked' }; 
                             return node;
                         });
-
                         return { ...c, schedule: { ...c.schedule, roadmap: newRoadmap } };
                     });
-
-                    return { 
-                        completedLessons: newCompleted,
-                        courses: updatedCourses
-                    };
+                    return { completedLessons: newCompleted, courses: updatedCourses };
                 });
             },
             
-            // بدء الامتحان النهائي للكورس
             startFinalExam: async (courseId) => {
                 const course = get().courses.find(c => c.id === courseId);
-                set({ isGeneratingQuestions: true, currentAssessmentQuestions: [] });
-                // يمكن استخدام دالة خاصة للامتحان النهائي أو الدالة العامة مع تعديل بسيط
-                // هنا سنفترض وجود دالة أو استخدام الدالة العامة
-                // للتبسيط سنستخدم generateTechnicalQuestions لكن يفضل عمل دالة خاصة للامتحان الشامل
-                const questions = await AI.generateTechnicalQuestions({ level: 'advanced' }); // أو دالة generateCourseFinalExam إذا أضفتها
-                set({ currentAssessmentQuestions: questions, isGeneratingQuestions: false });
-            },
-
-            // =================================================
-            // 3. المصادقة (Auth)
-            // =================================================
-            signup: (email, password, name) => {
-                const { registeredUsers } = get();
-                if (registeredUsers.find(u => u.email === email)) {
-                    return { success: false, message: 'البريد الإلكتروني مسجل بالفعل' };
+                set({ isGeneratingQuestions: true, currentAssessmentQuestions: [], assessmentSession: [] });
+                const questions = await AI.generateCourseFinalExam(course.title, course.lessons);
+                if (questions && questions.length > 0) {
+                    set({ currentAssessmentQuestions: questions, isGeneratingQuestions: false });
+                } else {
+                    console.warn("AI failed to generate specific exam.");
+                    set({ isGeneratingQuestions: false });
                 }
-                const newUser = {
-                    id: Date.now(),
-                    email,
-                    password,
-                    name,
-                    joinedAt: new Date().toISOString(),
-                    hasCompletedOnboarding: false,
-                    mindprint: {},
-                    codingGenome: { level: 'beginner' }, // قيمة افتراضية
-                    lifeTrajectory: {}
-                };
-                set((state) => ({
-                    registeredUsers: [...state.registeredUsers, newUser],
-                    user: newUser
-                }));
-                return { success: true };
             },
 
-            login: (email, password) => {
-                const { registeredUsers } = get();
-                const foundUser = registeredUsers.find(u => u.email === email && u.password === password);
-                if (foundUser) {
-                    set({ user: foundUser });
-                    return { success: true };
-                }
-                return { success: false, message: 'بيانات الدخول غير صحيحة' };
-            },
-
-            logout: () => {
-                set({ user: null, currentMode: 'neutral', dailyTasks: [] });
-                window.location.href = '/';
-            },
-
-            // =================================================
-            // 4. الذكاء الاصطناعي (Dashboard & Assessment)
-            // =================================================
-            
-            // تحليل Onboarding
-            startAIAnalysis: async (answers) => {
+            submitFinalExam: async (courseId, userAnswers, totalTime) => {
                 set({ isAnalyzing: true });
-                const analysis = await AI.generateUserAnalysis(answers);
-                if (analysis) {
-                    set((state) => {
-                        const updatedUser = { 
-                            ...state.user, 
-                            hasCompletedOnboarding: true,
-                            ...analysis 
+                const course = get().courses.find(c => c.id === courseId);
+                const questions = get().currentAssessmentQuestions;
+
+                const sessionData = questions.map(q => ({
+                    ...q,
+                    userAnswer: userAnswers[q.id]?.answer,
+                    isCorrect: userAnswers[q.id]?.answer === q.correctAnswer
+                }));
+                
+                set({ assessmentSession: sessionData });
+
+                const result = await AI.evaluateFinalExamSession(course.title, questions, userAnswers, totalTime);
+
+                if (result) {
+                    set(state => {
+                        const newHistory = {
+                            date: new Date().toISOString(),
+                            type: 'Final Exam',
+                            courseTitle: course.title,
+                            score: result.score,
+                            passed: result.passed,
+                            summary: result.feedback
                         };
-                        const updatedRegistry = state.registeredUsers.map(u => 
-                            u.id === updatedUser.id ? updatedUser : u
-                        );
+                        
+                        let updatedCourses = state.courses;
+                        if (result.passed) {
+                            updatedCourses = state.courses.map(c => 
+                                c.id === courseId 
+                                ? { ...c, hasCertificate: true, completedAt: new Date().toISOString() } 
+                                : c
+                            );
+                        }
+
                         return {
-                            user: updatedUser,
-                            registeredUsers: updatedRegistry,
+                            assessmentHistory: [...state.assessmentHistory, newHistory],
+                            courses: updatedCourses,
+                            finalReport: result,
                             isAnalyzing: false
                         };
                     });
-                    return true;
+                    return result;
                 }
+                
                 set({ isAnalyzing: false });
-                return false;
+                return null;
             },
 
-            // تحديث مهام الداشبورد
-            refreshDashboard: async () => {
-                const { user, currentMode } = get();
-                if (!user) return;
-                if (get().dailyTasks.length > 0) return;
-
+            activateRemedialMode: async (courseId, score) => {
                 set({ isAnalyzing: true });
-                const tasks = await AI.generateDailyTasksAI(user, currentMode);
-                if (tasks && tasks.length > 0) set({ dailyTasks: tasks });
-                set({ isAnalyzing: false });
-            },
+                const course = get().courses.find(c => c.id === courseId);
+                const session = get().assessmentSession;
+                const wrongAnswers = session.filter(s => !s.isCorrect);
+                
+                const remedialLessons = await AI.generateRemedialPlan(course.title, wrongAnswers, "General Weakness"); 
 
-            // بدء تقييم تقني جديد
-            startNewAssessment: async () => {
-                const { user } = get();
-                set({ isGeneratingQuestions: true, currentAssessmentQuestions: [], assessmentSession: [] });
-                
-                const questions = await AI.generateTechnicalQuestions(user?.codingGenome || { level: 'beginner' });
-                
-                if (questions && questions.length > 0) {
-                    set({ currentAssessmentQuestions: questions, isGeneratingQuestions: false });
+                if (remedialLessons && remedialLessons.length > 0) {
+                    set(state => {
+                        const updatedCourses = state.courses.map(c => {
+                            if (c.id !== courseId) return c;
+                            const failedExamNode = {
+                                type: 'failed_exam',
+                                score: score,
+                                date: new Date().toISOString().split('T')[0],
+                                status: 'completed', 
+                                lessonIndex: -1 
+                            };
+                            const currentLessonsCount = c.lessons.length;
+                            const newLessons = remedialLessons.map((l, idx) => ({ ...l, id: `remedial_${Date.now()}_${idx}`, isRemedial: true }));
+                            const allLessons = [...c.lessons, ...newLessons];
+                            const newRoadmapNodes = newLessons.map((_, idx) => ({
+                                lessonIndex: currentLessonsCount + idx, 
+                                date: new Date().toISOString().split('T')[0], 
+                                time: "Urgent",
+                                status: idx === 0 ? 'unlocked' : 'locked', 
+                                type: 'remedial'
+                            }));
+                            return {
+                                ...c,
+                                lessons: allLessons,
+                                schedule: {
+                                    ...c.schedule,
+                                    roadmap: [...c.schedule.roadmap, failedExamNode, ...newRoadmapNodes]
+                                }
+                            };
+                        });
+                        return { courses: updatedCourses, isAnalyzing: false };
+                    });
                     return true;
                 }
-                set({ isGeneratingQuestions: false });
+                set({ isAnalyzing: false });
                 return false;
             },
 
-            // تصحيح إجابة
-            submitAnswerToAI: async (qId, ans, time) => {
-                set({ isEvaluating: true });
-                const question = get().currentAssessmentQuestions.find(q => q.id === qId);
-                const result = await AI.evaluateAnswerAI(question, ans, time);
-
-                // كشف التوتر وتشغيل التدخل
-                if (result.stressDetected) {
-                    set({ showBreathingExercise: true, currentMode: 'anxiety' });
-                }
-
-                set(state => ({
-                    assessmentSession: [...state.assessmentSession, { ...result, qId, timeTaken: time }],
-                    isEvaluating: false
-                }));
-                return result;
-            },
-
-            // إنهاء التقييم
             finalizeAssessmentAI: async () => {
                 set({ isAnalyzing: true });
                 const analysis = await AI.generateFinalAnalysis(get().assessmentSession, get().user);
@@ -315,18 +308,14 @@ const useSimulationStore = create(
                             codingGenome: { ...state.user.codingGenome, ...analysis.updatedCodingGenome },
                             mindprint: { ...state.user.mindprint, ...analysis.updatedMindprint }
                         };
-                        // تحديث السجل الدائم
-                        const updatedRegistry = state.registeredUsers.map(u => 
-                            u.id === updatedUser.id ? updatedUser : u
-                        );
                         return {
                             user: updatedUser,
-                            registeredUsers: updatedRegistry,
                             assessmentHistory: [...state.assessmentHistory, { 
                                 date: new Date().toISOString(), 
                                 score: analysis.finalScore, 
                                 summary: analysis.summary 
                             }],
+                            finalReport: analysis,
                             isAnalyzing: false
                         }
                     });
@@ -336,35 +325,100 @@ const useSimulationStore = create(
                 return null;
             },
 
-            // =================================================
-            // 5. إجراءات مساعدة (Helpers)
-            // =================================================
+            // --- دوال الـ Onboarding ---
+            fetchOnboardingQuestions: async () => {
+                set({ isGeneratingQuestions: true });
+                const questions = await AI.generateOnboardingQuestionsAI();
+                if (questions) {
+                    set({ onboardingQuestions: questions, isGeneratingQuestions: false });
+                } else {
+                    set({ isGeneratingQuestions: false });
+                }
+            },
+
+            startAIAnalysis: async (answers) => {
+                set({ isAnalyzing: true });
+                const analysis = await AI.generateUserAnalysis(answers);
+                if (analysis) {
+                    set((state) => {
+                        const updatedUser = { 
+                            ...state.user, 
+                            hasCompletedOnboarding: true,
+                            ...analysis 
+                        };
+                        return {
+                            user: updatedUser,
+                            onboardingResult: analysis.recommendation, // ✅ حفظ النتيجة في الستور
+                            isAnalyzing: false
+                        };
+                    });
+                    return analysis.recommendation; 
+                }
+                set({ isAnalyzing: false });
+                return null;
+            },
+
+            // --- المصادقة ---
+            signup: (email, password, name) => { set(state => ({ user: { id: Date.now(), name, email } })); return { success: true }; },
+            login: (email, password) => { set(state => ({ user: { id: 1, name: 'User', email } })); return { success: true }; },
+            logout: () => { set({ user: null }); window.location.href = '/'; },
+
+            refreshDashboard: async () => {
+                const { user, currentMode, courses, enrolledCourses } = get();
+                if (!user || enrolledCourses.length === 0) { set({ dailyTasks: [] }); return; }
+                if (get().dailyTasks.length > 0) return;
+                set({ isAnalyzing: true });
+                const today = new Date().toISOString().split('T')[0];
+                const dueLessons = [];
+                enrolledCourses.forEach(courseId => {
+                    const course = courses.find(c => c.id === courseId);
+                    if (course && course.schedule && course.schedule.roadmap) {
+                        const todaysNodes = course.schedule.roadmap.filter(node => node.date === today && node.type !== 'failed_exam');
+                        todaysNodes.forEach(node => {
+                            if (node.lessonIndex !== undefined && course.lessons[node.lessonIndex]) {
+                                dueLessons.push({
+                                    title: `${course.title}: ${course.lessons[node.lessonIndex].title}`,
+                                    duration: course.lessons[node.lessonIndex].duration
+                                });
+                            }
+                        });
+                    }
+                });
+                const tasks = await AI.generateDailyTasksAI(user, currentMode, dueLessons);
+                if (tasks && tasks.length > 0) set({ dailyTasks: tasks });
+                set({ isAnalyzing: false });
+            },
+
+            // ممارسة عادية (Practice)
+            startNewAssessment: async () => {
+                const { user } = get();
+                set({ isGeneratingQuestions: true, currentAssessmentQuestions: [], assessmentSession: [] });
+                const questions = await AI.generateTechnicalQuestions(user?.codingGenome || { level: 'beginner' });
+                if (questions && questions.length > 0) {
+                    set({ currentAssessmentQuestions: questions, isGeneratingQuestions: false });
+                    return true;
+                }
+                set({ isGeneratingQuestions: false });
+                return false;
+            },
+
+            submitAnswerToAI: async (qId, ans, time) => {
+                set({ isEvaluating: true });
+                const question = get().currentAssessmentQuestions.find(q => q.id === qId);
+                const result = await AI.evaluateAnswerAI(question, ans, time);
+                if (result.stressDetected) set({ showBreathingExercise: true, currentMode: 'anxiety' });
+                set(state => ({ assessmentSession: [...state.assessmentSession, { ...result, qId, timeTaken: time }], isEvaluating: false }));
+                return result;
+            },
+
             enrollCourse: (id) => set(state => ({ enrolledCourses: [...state.enrolledCourses, id] })),
-            
             triggerBreathingExercise: () => set({ showBreathingExercise: true }),
             closeBreathingExercise: () => set({ showBreathingExercise: false }),
-            
-            setCurrentMode: (mode) => {
-                set({ currentMode: mode, dailyTasks: [] }); // مسح المهام لإجبار التحديث
-                get().refreshDashboard();
-            },
-            
-            // دالة Reset مفيدة للعرض التقديمي لمسح البيانات والبدء من جديد
-            resetDemo: () => {
-                set({
-                    user: null,
-                    courses: defaultCourses || [],
-                    enrolledCourses: [],
-                    completedLessons: [],
-                    assessmentHistory: [],
-                    dailyTasks: []
-                });
-                localStorage.removeItem('sera-storage');
-                window.location.href = '/';
-            }
+            setCurrentMode: (mode) => { set({ currentMode: mode, dailyTasks: [] }); get().refreshDashboard(); },
+            resetDemo: () => { localStorage.removeItem('sera-storage-v2'); window.location.href = '/'; }
         }),
         {
-            name: 'sera-storage', // مفتاح LocalStorage
+            name: 'sera-storage-v2', 
             storage: createJSONStorage(() => localStorage),
         }
     )

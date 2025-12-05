@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom' // أضفنا useNavigate
+import { Link, useLocation, useNavigate } from 'react-router-dom' 
 import gsap from 'gsap'
-import { Menu, X, Home, BookOpen, FileText, BarChart3, User, LogOut } from 'lucide-react'
+import { Menu, X, Home, BookOpen, BarChart3, User, LogOut } from 'lucide-react' // ❌ تمت إزالة FileText
 import useSimulationStore from '../store/simulationStore'
 import LanguageSwitcher from './LanguageSwitcher'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -15,14 +15,13 @@ const Navbar = () => {
     const { t } = useLanguage()
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
     
-    // هنا نقوم باستدعاء logout من الـ Store
     const { user, logout } = useSimulationStore()
 
     const isLandingPage = location.pathname === '/'
     const isOnboarding = location.pathname === '/onboarding'
 
     const handleLogout = () => {
-        logout(); // الآن هذه الدالة موجودة في الـ Store ولن تعطي خطأ
+        logout(); 
         navigate('/');
     }
 
@@ -45,17 +44,16 @@ const Navbar = () => {
 
     if (isOnboarding) return null
 
-    // ... (بقية مصفوفات الـ navigation كما هي)
     const landingNavItems = [
         { label: t('navbar.features'), id: 'features' },
         { label: t('navbar.about'), id: 'philosophy' },
         { label: t('navbar.contact'), id: 'cta' },
     ]
 
+    // ✅ تم إزالة رابط الـ Assessment من هنا
     const appNavItems = [
         { label: t('navbar.dashboard'), path: '/dashboard', icon: Home },
         { label: t('navbar.courses'), path: '/courses', icon: BookOpen },
-        { label: t('navbar.assessment'), path: '/assessment', icon: FileText },
         { label: t('navbar.reports'), path: '/reports', icon: BarChart3 },
         { label: t('navbar.profile'), path: '/profile', icon: User },
     ]
@@ -106,11 +104,10 @@ const Navbar = () => {
                         })}
                     </ul>
 
-                    {/* أزرار الإجراءات */}
+                    {/* Action Buttons */}
                     <div className="flex items-center gap-4">
                         <LanguageSwitcher />
                         
-                        {/* زر تسجيل الدخول أو الخروج */}
                         {isLandingPage ? (
                             <Link to={user?.hasCompletedOnboarding ? '/dashboard' : '/onboarding'} className="px-6 py-2 rounded-lg bg-gradient-to-r from-neon-blue to-neon-violet text-white font-semibold hover:scale-105 transition-transform duration-300 glow-blue">
                                 {t('landing.cta.button')}
@@ -133,10 +130,23 @@ const Navbar = () => {
                 </button>
             </div>
             
-            {/* Mobile Menu (مختصر) */}
+            {/* Mobile Menu */}
             <div className={`md:hidden absolute top-full left-0 right-0 glass overflow-hidden transition-all duration-300 ${isMobileMenuOpen ? 'max-h-96 border-t border-white/10' : 'max-h-0'}`}>
                  <ul className="px-6 py-4 space-y-4">
-                    {/* ... (Mobile items here) */}
+                    {(isLandingPage ? landingNavItems : appNavItems).map((item) => (
+                        <li key={item.id || item.path}>
+                            {isLandingPage ? (
+                                <button onClick={() => scrollToSection(item.id)} className="block text-gray-300 hover:text-white py-2">
+                                    {item.label}
+                                </button>
+                            ) : (
+                                <Link to={item.path} onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 text-gray-300 hover:text-white py-2">
+                                    {item.icon && <item.icon className="w-5 h-5" />}
+                                    {item.label}
+                                </Link>
+                            )}
+                        </li>
+                    ))}
                     {!isLandingPage && (
                         <li>
                             <button onClick={handleLogout} className="flex items-center gap-2 text-red-400 w-full py-2">

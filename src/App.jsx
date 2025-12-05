@@ -12,96 +12,42 @@ import BreathingExercise from './components/wellness/BreathingExercise'
 import LoginPage from './pages/LoginPage'
 import SignupPage from './pages/SignupPage'
 import ProtectedRoute from './components/auth/ProtectedRoute'
-import CourseSetup from './pages/CourseSetup'       // ✅ جديد
-import InitializingView from './pages/InitializingView' // ✅ جديد
-import DomainSelection from './pages/DomainSelection'   // ✅ جديد
-import CertificatePage from './pages/CertificatePage'   // ✅ جديد
+import CourseSetup from './pages/CourseSetup'       
+import InitializingView from './pages/InitializingView' 
+import DomainSelection from './pages/DomainSelection'   
+import CertificatePage from './pages/CertificatePage'   
 import CourseJourneyPage from './pages/CourseJourneyPage'
+import LessonViewer from './pages/LessonViewer' // تأكد من استيراد هذا إذا لم يكن موجوداً
+import DevTools from './components/DevTools' // ✅ إضافة استيراد DevTools
 
 function App() {
     return (
         <LanguageProvider>
             <Router>
                 <BreathingExercise />
+                <DevTools /> {/* ✅ إضافة الزر هنا ليظهر في كل الصفحات */}
+                
                 <Routes>
                     {/* Public Routes */}
                     <Route path="/" element={<LandingPage />} />
                     <Route path="/login" element={<LoginPage />} />
                     <Route path="/signup" element={<SignupPage />} />
 
-                    {/* Protected Routes - المسارات المحمية */}
-                    
-                    {/* Onboarding & Domain Selection */}
-                    <Route path="/onboarding" element={
-                        <ProtectedRoute>
-                            <Onboarding />
-                        </ProtectedRoute>
-                    } />
-                    <Route path="/domain-selection" element={
-                        <ProtectedRoute>
-                            <DomainSelection />
-                        </ProtectedRoute>
-                    } />
+                    {/* Protected Routes */}
+                    <Route path="/onboarding" element={<ProtectedRoute><Onboarding /></ProtectedRoute>} />
+                    <Route path="/domain-selection" element={<ProtectedRoute><DomainSelection /></ProtectedRoute>} />
+                    <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+                    <Route path="/reports" element={<ProtectedRoute><ReportsPage /></ProtectedRoute>} />
+                    <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
+                    <Route path="/courses" element={<ProtectedRoute><CoursePage /></ProtectedRoute>} />
+                    <Route path="/journey/:courseId" element={<ProtectedRoute><CourseJourneyPage /></ProtectedRoute>} />
+                    <Route path="/course-setup" element={<ProtectedRoute><CourseSetup /></ProtectedRoute>} />
+                    <Route path="/initializing" element={<ProtectedRoute><InitializingView /></ProtectedRoute>} />
+                    <Route path="/assessment" element={<ProtectedRoute><AssessmentPage /></ProtectedRoute>} />
+                    <Route path="/certificate" element={<ProtectedRoute><CertificatePage /></ProtectedRoute>} />
+                    {/* إضافة مسار الدرس إذا كان ناقصاً */}
+                    <Route path="/lesson/:lessonId" element={<ProtectedRoute><LessonViewer /></ProtectedRoute>} /> 
 
-                    {/* Dashboard & Main Features */}
-                    <Route path="/dashboard" element={
-                        <ProtectedRoute>
-                            <Dashboard />
-                        </ProtectedRoute>
-                    } />
-                    
-                    <Route path="/reports" element={
-                        <ProtectedRoute>
-                            <ReportsPage />
-                        </ProtectedRoute>
-                    } />
-                    
-                    <Route path="/profile" element={
-                        <ProtectedRoute>
-                            <ProfilePage />
-                        </ProtectedRoute>
-                    } />
-
-                    {/* Learning Flow: Courses -> Setup -> Initializing -> Lesson */}
-                    <Route path="/courses" element={
-                        <ProtectedRoute>
-                            <CoursePage />
-                        </ProtectedRoute>
-                    } />
-
-                    <Route path="/journey/:courseId" element={
-                        <ProtectedRoute>
-                            <CourseJourneyPage />
-                        </ProtectedRoute>
-                    } />
-                    
-                    {/* ✅ هذا هو المسار الذي كان ناقصاً ويسبب المشكلة */}
-                    <Route path="/course-setup" element={
-                        <ProtectedRoute>
-                            <CourseSetup />
-                        </ProtectedRoute>
-                    } />
-
-                    <Route path="/initializing" element={
-                        <ProtectedRoute>
-                            <InitializingView />
-                        </ProtectedRoute>
-                    } />
-                    
-                    
-                    <Route path="/assessment" element={
-                        <ProtectedRoute>
-                            <AssessmentPage />
-                        </ProtectedRoute>
-                    } />
-
-                    <Route path="/certificate" element={
-                        <ProtectedRoute>
-                            <CertificatePage />
-                        </ProtectedRoute>
-                    } />
-
-                    {/* Catch all - أي رابط غير موجود يرجع للرئيسية */}
                     <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
             </Router>

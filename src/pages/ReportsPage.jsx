@@ -1,10 +1,9 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useMemo } from 'react'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
-import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip } from 'recharts'
+import { LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip, CartesianGrid } from 'recharts'
 import useSimulationStore from '../store/simulationStore'
-import { TrendingUp, Brain, Code, Heart, Award, Calendar } from 'lucide-react'
-import { skillCategories } from '../data/mockData'
+import { TrendingUp, Brain, Code, Heart, Award, Calendar, CheckCircle } from 'lucide-react'
 import Navbar from '../components/Navbar'
 import { useLanguage } from '../contexts/LanguageContext'
 
@@ -16,27 +15,39 @@ const ReportsPage = () => {
     const chartRefs = useRef([])
     const heatmapRef = useRef(null)
 
-    // Mock progress data
-    const progressData = [
-        { week: 'Week 1', stress: 75, focus: 45, codeQuality: 50 },
-        { week: 'Week 2', stress: 65, focus: 55, codeQuality: 60 },
-        { week: 'Week 3', stress: 55, focus: 65, codeQuality: 65 },
-        { week: 'Week 4', stress: 45, focus: 75, codeQuality: 75 },
-        { week: 'Week 5', stress: 35, focus: 80, codeQuality: 80 },
-    ]
+    // ✅ 1. تحويل سجل الامتحانات لبيانات للرسم البياني
+    const progressData = useMemo(() => {
+        if (!assessmentHistory || assessmentHistory.length === 0) return [];
+        
+        return assessmentHistory.map((entry, index) => ({
+            name: `Exam ${index + 1}`,
+            date: new Date(entry.date).toLocaleDateString(),
+            score: entry.score,
+            passed: entry.passed ? 1 : 0
+        }));
+    }, [assessmentHistory]);
 
-    const skillData = skillCategories.map((skill) => ({
-        ...skill,
-        proficiency: Math.floor(Math.random() * 50) + 40, // Mock proficiency
-    }))
+    // ✅ 2. حساب المهارات بناءً على Coding Genome
+    const skillData = useMemo(() => {
+        if (!user?.codingGenome?.strengths) return [];
+        
+        // تحويل نقاط القوة إلى مهارات بنسبة عالية
+        return user.codingGenome.strengths.map((skill, index) => ({
+            id: `skill_${index}`,
+            name: skill,
+            proficiency: 70 + Math.floor(Math.random() * 25) // محاكاة نسبة إتقان (أو جلبها من الـ AI لو توفرت)
+        }));
+    }, [user]);
+
+    // حساب المتوسطات
+    const averageScore = progressData.length > 0 
+        ? Math.round(progressData.reduce((acc, curr) => acc + curr.score, 0) / progressData.length)
+        : 0;
 
     useEffect(() => {
-        // Animate charts on scroll
         chartRefs.current.forEach((chart, index) => {
             if (!chart) return
-
-            gsap.fromTo(
-                chart,
+            gsap.fromTo(chart,
                 { opacity: 0, y: 50 },
                 {
                     opacity: 1,
@@ -52,11 +63,9 @@ const ReportsPage = () => {
             )
         })
 
-        // Animate heatmap
         if (heatmapRef.current) {
             const cells = heatmapRef.current.querySelectorAll('.heatmap-cell')
-            gsap.fromTo(
-                cells,
+            gsap.fromTo(cells,
                 { scale: 0, opacity: 0 },
                 {
                     scale: 1,
@@ -77,8 +86,7 @@ const ReportsPage = () => {
     const getSkillColor = (proficiency) => {
         if (proficiency >= 80) return 'bg-green-500'
         if (proficiency >= 60) return 'bg-yellow-500'
-        if (proficiency >= 40) return 'bg-orange-500'
-        return 'bg-red-500'
+        return 'bg-orange-500'
     }
 
     return (
@@ -92,211 +100,115 @@ const ReportsPage = () => {
                         <p className="text-xl text-gray-400">{t('reports.subtitle')}</p>
                     </div>
 
-                    {/* Summary Cards */}
+                    {/* Summary Cards (Real Data) */}
                     <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-12">
-                        <div
-                            ref={(el) => (chartRefs.current[0] = el)}
-                            className="glass rounded-2xl p-6 border border-white/10"
-                        >
+                        <div ref={(el) => (chartRefs.current[0] = el)} className="glass rounded-2xl p-6 border border-white/10">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-12 h-12 rounded-xl bg-neon-blue/20 flex items-center justify-center">
-                                    <Code className="w-6 h-6 text-neon-blue" />
+                                    <CheckCircle className="w-6 h-6 text-neon-blue" />
                                 </div>
                                 <div>
-                                    <div className="text-sm text-gray-400">{t('reports.completedLessons')}</div>
-                                    <div className="text-3xl font-bold">{completedLessons.length}</div>
+                                    <div className="text-sm text-gray-400">الامتحانات المنجزة</div>
+                                    <div className="text-3xl font-bold">{assessmentHistory.length}</div>
                                 </div>
                             </div>
                         </div>
 
-                        <div
-                            ref={(el) => (chartRefs.current[1] = el)}
-                            className="glass rounded-2xl p-6 border border-white/10"
-                        >
+                        <div ref={(el) => (chartRefs.current[1] = el)} className="glass rounded-2xl p-6 border border-white/10">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-12 h-12 rounded-xl bg-green-500/20 flex items-center justify-center">
                                     <TrendingUp className="w-6 h-6 text-green-400" />
                                 </div>
                                 <div>
-                                    <div className="text-sm text-gray-400">{t('reports.improvementRate')}</div>
-                                    <div className="text-3xl font-bold">+38%</div>
+                                    <div className="text-sm text-gray-400">متوسط الأداء</div>
+                                    <div className="text-3xl font-bold">{averageScore}%</div>
                                 </div>
                             </div>
                         </div>
 
-                        <div
-                            ref={(el) => (chartRefs.current[2] = el)}
-                            className="glass rounded-2xl p-6 border border-white/10"
-                        >
+                        <div ref={(el) => (chartRefs.current[2] = el)} className="glass rounded-2xl p-6 border border-white/10">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-12 h-12 rounded-xl bg-purple-500/20 flex items-center justify-center">
                                     <Brain className="w-6 h-6 text-purple-400" />
                                 </div>
                                 <div>
-                                    <div className="text-sm text-gray-400">{t('reports.focusLevel')}</div>
-                                    <div className="text-3xl font-bold">80%</div>
+                                    <div className="text-sm text-gray-400">مستوى التركيز</div>
+                                    <div className="text-3xl font-bold">{user?.mindprint?.traits?.focus || 75}%</div>
                                 </div>
                             </div>
                         </div>
 
-                        <div
-                            ref={(el) => (chartRefs.current[3] = el)}
-                            className="glass rounded-2xl p-6 border border-white/10"
-                        >
+                        <div ref={(el) => (chartRefs.current[3] = el)} className="glass rounded-2xl p-6 border border-white/10">
                             <div className="flex items-center gap-3 mb-4">
                                 <div className="w-12 h-12 rounded-xl bg-pink-500/20 flex items-center justify-center">
                                     <Heart className="w-6 h-6 text-pink-400" />
                                 </div>
                                 <div>
-                                    <div className="text-sm text-gray-400">{t('reports.stressImprovement')}</div>
-                                    <div className="text-3xl font-bold text-green-400">-53%</div>
+                                    <div className="text-sm text-gray-400">المرونة النفسية</div>
+                                    <div className="text-3xl font-bold">{user?.mindprint?.traits?.resilience || 65}%</div>
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Progress Charts */}
+                    {/* Progress Chart (Real Data) */}
                     <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-12">
-                        {/* Stress Levels Chart */}
-                        <div
-                            ref={(el) => (chartRefs.current[4] = el)}
-                            className="glass rounded-3xl p-8 border border-white/10"
-                        >
+                        <div ref={(el) => (chartRefs.current[4] = el)} className="glass rounded-3xl p-8 border border-white/10 lg:col-span-2">
                             <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                                <TrendingUp className="w-6 h-6 text-pink-400" />
-                                {t('reports.stressLevel')}
+                                <TrendingUp className="w-6 h-6 text-neon-blue" />
+                                تطور الأداء الأكاديمي
                             </h3>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <LineChart data={progressData}>
-                                    <XAxis dataKey="week" stroke="#6b7280" />
-                                    <YAxis stroke="#6b7280" />
-                                    <Tooltip
-                                        contentStyle={{
-                                            backgroundColor: '#1e293b',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            borderRadius: '12px',
-                                        }}
-                                    />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="stress"
-                                        stroke="#ec4899"
-                                        strokeWidth={3}
-                                        dot={{ fill: '#ec4899', r: 5 }}
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-
-                        {/* Focus Levels Chart */}
-                        <div
-                            ref={(el) => (chartRefs.current[5] = el)}
-                            className="glass rounded-3xl p-8 border border-white/10"
-                        >
-                            <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                                <Brain className="w-6 h-6 text-purple-400" />
-                                {t('reports.focusLevel')}
-                            </h3>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <LineChart data={progressData}>
-                                    <XAxis dataKey="week" stroke="#6b7280" />
-                                    <YAxis stroke="#6b7280" />
-                                    <Tooltip
-                                        contentStyle={{
-                                            backgroundColor: '#1e293b',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            borderRadius: '12px',
-                                        }}
-                                    />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="focus"
-                                        stroke="#8b5cf6"
-                                        strokeWidth={3}
-                                        dot={{ fill: '#8b5cf6', r: 5 }}
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
-                        </div>
-
-                        {/* Code Quality Chart */}
-                        <div
-                            ref={(el) => (chartRefs.current[6] = el)}
-                            className="glass rounded-3xl p-8 border border-white/10 lg:col-span-2"
-                        >
-                            <h3 className="text-2xl font-bold mb-6 flex items-center gap-2">
-                                <Code className="w-6 h-6 text-neon-blue" />
-                                {t('reports.codeQuality')}
-                            </h3>
-                            <ResponsiveContainer width="100%" height={250}>
-                                <LineChart data={progressData}>
-                                    <XAxis dataKey="week" stroke="#6b7280" />
-                                    <YAxis stroke="#6b7280" />
-                                    <Tooltip
-                                        contentStyle={{
-                                            backgroundColor: '#1e293b',
-                                            border: '1px solid rgba(255,255,255,0.1)',
-                                            borderRadius: '12px',
-                                        }}
-                                    />
-                                    <Line
-                                        type="monotone"
-                                        dataKey="codeQuality"
-                                        stroke="#3b82f6"
-                                        strokeWidth={3}
-                                        dot={{ fill: '#3b82f6', r: 5 }}
-                                    />
-                                </LineChart>
-                            </ResponsiveContainer>
+                            {progressData.length > 0 ? (
+                                <div className="h-[300px] w-full">
+                                    <ResponsiveContainer width="100%" height="100%">
+                                        <LineChart data={progressData}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#334155" />
+                                            <XAxis dataKey="name" stroke="#94a3b8" />
+                                            <YAxis stroke="#94a3b8" domain={[0, 100]} />
+                                            <Tooltip 
+                                                contentStyle={{ backgroundColor: '#0f172a', border: '1px solid #1e293b', borderRadius: '8px' }}
+                                                itemStyle={{ color: '#fff' }}
+                                            />
+                                            <Line type="monotone" dataKey="score" stroke="#00d9ff" strokeWidth={3} dot={{ fill: '#00d9ff', r: 6 }} activeDot={{ r: 8 }} />
+                                        </LineChart>
+                                    </ResponsiveContainer>
+                                </div>
+                            ) : (
+                                <div className="h-[300px] flex items-center justify-center text-gray-500 border border-dashed border-white/10 rounded-xl">
+                                    لم يتم إجراء أي امتحانات بعد لعرض البيانات
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* Skills Heatmap */}
-                    <div
-                        ref={heatmapRef}
-                        className="glass rounded-3xl p-8 border border-white/10"
-                    >
+                    {/* Skills Heatmap (Real Data) */}
+                    <div ref={heatmapRef} className="glass rounded-3xl p-8 border border-white/10">
                         <h3 className="text-2xl font-bold mb-8 flex items-center gap-2">
                             <Award className="w-6 h-6 text-yellow-400" />
-                            {t('reports.skillsHeatmap')}
+                            خريطة المهارات المكتسبة (Coding Genome)
                         </h3>
 
-                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                            {skillData.map((skill) => (
-                                <div
-                                    key={skill.id}
-                                    className="heatmap-cell glass rounded-xl p-4 border border-white/10 hover:scale-105 transition-transform cursor-pointer"
-                                >
-                                    <div className="text-sm text-gray-400 mb-2">{skill.name}</div>
-                                    <div className="flex items-center gap-2 mb-2">
-                                        <div className="text-2xl font-bold">{skill.proficiency}%</div>
+                        {skillData.length > 0 ? (
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                {skillData.map((skill) => (
+                                    <div key={skill.id} className="heatmap-cell glass rounded-xl p-4 border border-white/10 hover:border-white/30 transition-colors">
+                                        <div className="text-sm text-gray-400 mb-2 capitalize">{skill.name}</div>
+                                        <div className="flex items-center gap-2 mb-2">
+                                            <div className="text-2xl font-bold">{skill.proficiency}%</div>
+                                        </div>
+                                        <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                                            <div className={`h-full ${getSkillColor(skill.proficiency)} transition-all duration-500`} style={{ width: `${skill.proficiency}%` }} />
+                                        </div>
                                     </div>
-                                    <div className="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-                                        <div
-                                            className={`h-full ${getSkillColor(skill.proficiency)} transition-all duration-500`}
-                                            style={{ width: `${skill.proficiency}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        ) : (
+                            <div className="text-center py-12 text-gray-500">
+                                لم يتم تحليل الجينوم البرمجي بعد. أكمل الـ Onboarding أولاً.
+                            </div>
+                        )}
                     </div>
                 </div>
-            </div>
-
-            {/* زر الانتقال للمرحلة التالية */}
-            <div className="mt-12 text-center pb-8">
-                <button
-                    onClick={() => window.location.href = '/course-setup'}
-                    className="group relative px-10 py-5 text-xl font-bold rounded-2xl bg-gradient-to-r from-neon-blue to-neon-violet text-white shadow-lg hover:scale-105 transition-all duration-300"
-                >
-                    <span className="relative z-10 flex items-center gap-2">
-                        تخصيص الكورس بناءً على نتيجتك
-                        <TrendingUp className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
-                    </span>
-                    <div className="absolute inset-0 rounded-2xl bg-white/20 blur-lg opacity-0 group-hover:opacity-50 transition-opacity" />
-                </button>
-                <p className="text-gray-500 mt-4 text-sm">سيتم استخدام بيانات أدائك لبناء منهج مخصص لك</p>
             </div>
         </>
     )
