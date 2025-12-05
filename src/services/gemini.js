@@ -55,8 +55,9 @@ export const evaluateAnswerAI = async (question, answer, time) => {
   } catch (e) { return { isCorrect: false, score: 0, stressDetected: false }; }
 };
 
-// --- 5. التحليل النهائي (Final Report) ---
+// --- 5. التحليل النهائي (تحديث بسيط) ---
 export const generateFinalAnalysis = async (session, oldProfile) => {
+  // ... (نفس الكود القديم)
   const prompt = `
     Analyze session: ${JSON.stringify(session)}. Update profile: ${JSON.stringify(oldProfile)}.
     Return JSON: { "finalScore": number, "summary": "...", "updatedCodingGenome": {...}, "updatedMindprint": {...} }
@@ -79,8 +80,9 @@ export const generateCurriculumAI = async (hours, days, profile) => {
   } catch (e) { return []; }
 };
 
-// --- 7. توليد كورس جديد كامل (Create Course) ---
+// --- 7. توليد كورس جديد (Create Course) ---
 export const generateNewCourseAI = async (topic) => {
+  // ... (نفس الكود القديم)
   const prompt = `
     Act as a professional curriculum designer.
     Create a detailed course structure for the topic: "${topic}".
@@ -99,7 +101,7 @@ export const generateNewCourseAI = async (topic) => {
     }
     Make sure the content is educational and structured. Translate titles/descriptions to Arabic if the input was Arabic.
   `;
-  
+
   try {
     const res = await model.generateContent(prompt);
     return JSON.parse(res.response.text().replace(/```json|```/g, "").trim());
@@ -109,38 +111,41 @@ export const generateNewCourseAI = async (topic) => {
   }
 };
 
-// --- 8. توليد مسار زمني مفصل للكورس (Smart Schedule) ---
+// --- 8. توليد جدول الرحلة (Journey Map) ---
 export const generateCourseScheduleAI = async (courseDetails, userRoutine, userProfile) => {
   const prompt = `
-    Act as a personal productivity coach and curriculum expert.
+    Act as a strict time-management coach.
     
     Context:
-    - User Profile: ${JSON.stringify(userProfile)}
-    - User's Daily Routine/Constraints: "${userRoutine}"
-    - Target Course: "${courseDetails.title}" (Difficulty: ${courseDetails.difficulty})
-    - Course Lessons: ${JSON.stringify(courseDetails.lessons)}
-
-    Task:
-    Create a realistic, day-by-day study path to complete this course.
-    The schedule MUST respect the user's routine (e.g., if they work 9-5, schedule tasks in the evening).
+    - Course: "${courseDetails.title}" (${courseDetails.lessons.length} lessons)
+    - User Routine: "${userRoutine}"
+    - Today's Date: ${new Date().toISOString().split('T')[0]}
     
-    Return a strictly valid JSON object with this structure:
+    Task: 
+    Create a realistic schedule starting from TOMORROW.
+    Assign each lesson a specific Date (YYYY-MM-DD) and Time (HH:MM AM/PM).
+    Spread lessons logically (e.g., 1-2 lessons per day depending on routine).
+    
+    Return a strictly valid JSON object:
     {
-      "startDate": "YYYY-MM-DD (assume tomorrow)",
-      "estimatedCompletionDate": "YYYY-MM-DD",
-      "dailyIntensity": "Low/Medium/High",
       "roadmap": [
         {
-          "day": 1,
-          "topic": "Focus of the day",
-          "tasks": [
-            { "time": "HH:MM (e.g., 19:00)", "activity": "Study: Lesson Name", "duration": "45m" },
-            { "time": "HH:MM", "activity": "Practical Exercise / Quiz", "duration": "20m" }
-          ],
-          "note": "Brief motivation or tip based on user profile"
+          "lessonIndex": 0,
+          "date": "YYYY-MM-DD",
+          "time": "HH:MM AM/PM",
+          "status": "unlocked",
+          "type": "lesson"
+        },
+        {
+           "lessonIndex": 1,
+           "date": "YYYY-MM-DD",
+           "time": "HH:MM AM/PM",
+           "status": "locked",
+           "type": "lesson"
         }
-        // ... Generate enough days to cover all lessons
-      ]
+        // ... map ALL lessons
+      ],
+      "finalExamDate": "YYYY-MM-DD"
     }
   `;
 
@@ -152,4 +157,29 @@ export const generateCourseScheduleAI = async (courseDetails, userRoutine, userP
     console.error("Schedule Generation Error", error);
     return null;
   }
+};
+
+// --- 9. توليد الامتحان النهائي للكورس ---
+export const generateCourseFinalExam = async (courseTitle, lessons) => {
+  const prompt = `
+      Generate a comprehensive final exam for the course: "${courseTitle}".
+      Topics: ${lessons ? lessons.map(l => l.title).join(', ') : 'General topics'}.
+      
+      Return a JSON array of 10 questions:
+      [
+        {
+          "id": "final_1",
+          "type": "mcq",
+          "question": "...",
+          "options": [{"value":"a", "label":"..."}, ...],
+          "correctAnswer": "a",
+          "difficulty": "hard"
+        }
+        // ... 10 questions
+      ]
+    `;
+  try {
+    const res = await model.generateContent(prompt);
+    return JSON.parse(res.response.text().replace(/```json|```/g, "").trim());
+  } catch (e) { return []; }
 };

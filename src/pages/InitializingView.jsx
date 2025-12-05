@@ -1,13 +1,17 @@
 import React, { useEffect, useRef, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom' // ✅ إضافة useLocation
 import gsap from 'gsap'
 import { Cpu, Database, Layout, Calendar } from 'lucide-react'
 
 const InitializingView = () => {
     const navigate = useNavigate()
+    const location = useLocation() // ✅ استقبال الحالة
     const [currentStep, setCurrentStep] = useState(0)
     const textRef = useRef(null)
     const barRef = useRef(null)
+
+    // استخراج المسار التالي من الـ state أو العودة للكورسات كخيار افتراضي
+    const nextPath = location.state?.nextPath || '/courses'
 
     const steps = [
         { text: "تحليل نمطك اليومي...", icon: Calendar },
@@ -20,32 +24,29 @@ const InitializingView = () => {
     useEffect(() => {
         const tl = gsap.timeline({
             onComplete: () => {
-                setTimeout(() => navigate('/courses'), 500) // التوجيه لصفحة الكورسات بعد الانتهاء
+                setTimeout(() => navigate(nextPath || '/courses', { replace: true }), 500)
             }
         })
 
-        // أنيميشن شريط التقدم الكلي
         tl.to(barRef.current, {
             width: '100%',
-            duration: 6, // مدة العملية كاملة
+            duration: 6,
             ease: 'power1.inOut'
         })
 
-        // تغيير النصوص بناءً على الوقت
         steps.forEach((step, index) => {
             const stepTime = 6 / steps.length
-            
+
             tl.call(() => {
                 setCurrentStep(index)
-                // أنيميشن للنص عند التغيير
-                gsap.fromTo(textRef.current, 
+                gsap.fromTo(textRef.current,
                     { opacity: 0, y: 20 },
                     { opacity: 1, y: 0, duration: 0.3 }
                 )
             }, null, index * stepTime)
         })
 
-    }, [])
+    }, [navigate, nextPath]) // إضافة التبعيات
 
     const CurrentIcon = steps[currentStep]?.icon
 
@@ -76,7 +77,7 @@ const InitializingView = () => {
 
                 {/* شريط التقدم */}
                 <div className="w-full h-1 bg-slate-800 rounded-full overflow-hidden relative">
-                    <div 
+                    <div
                         ref={barRef}
                         className="h-full bg-gradient-to-r from-neon-blue via-neon-violet to-white w-0 shadow-[0_0_15px_rgba(0,217,255,0.8)]"
                     />

@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { coursesData } from '../data/mockData'
 import useSimulationStore from '../store/simulationStore'
-import { ChevronLeft, ChevronRight, CheckCircle, BookOpen, Lock, AlertCircle } from 'lucide-react'
+// ✅ تم إضافة Award هنا
+import { ChevronLeft, ChevronRight, CheckCircle, BookOpen, Lock, AlertCircle, Award } from 'lucide-react'
 import ReactMarkdown from 'react-markdown'
 import Navbar from '../components/Navbar'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -12,51 +12,61 @@ const LessonViewer = () => {
     const { t } = useLanguage()
     const { lessonId } = useParams()
     const navigate = useNavigate()
-    const { completedLessons, completeLesson } = useSimulationStore()
     
-    // حالات الكويز
+    const { courses, completedLessons, completeLesson } = useSimulationStore()
+    
     const [showQuiz, setShowQuiz] = useState(false)
     const [quizAnswers, setQuizAnswers] = useState({})
     const [quizSubmitted, setQuizSubmitted] = useState(false)
     const [quizPassed, setQuizPassed] = useState(false)
 
-    // استخراج البيانات
-    const [courseId, ...lessonParts] = lessonId.split('_')
-    const course = coursesData.find((c) => c.id === courseId)
-    const lessonIndex = parseInt(lessonParts.join('_').split('_')[1]) - 1
+    // استخراج معرف الكورس والدرس
+    const parts = lessonId.split('_')
+    const lessonIndexStr = parts.pop()
+    const unitIndexStr = parts.pop()
+    const courseId = parts.join('_')
+    
+    const lessonIndex = parseInt(lessonIndexStr) - 1
+
+    const course = courses.find((c) => c.id === courseId)
     const lesson = course?.lessons?.[lessonIndex]
     
-    // هل الدرس مكتمل مسبقاً؟
     const isAlreadyCompleted = completedLessons.includes(lessonId)
 
-    if (!course || !lesson) return <div>Lesson not found</div>
+    if (!course || !lesson) {
+        return (
+            <div className="min-h-screen bg-slate-950 text-white flex items-center justify-center">
+                <div className="text-center">
+                    <h2 className="text-2xl font-bold mb-4">عذراً، لم يتم العثور على هذا الدرس</h2>
+                    <button onClick={() => navigate('/courses')} className="text-neon-blue hover:underline">
+                        العودة للكورسات
+                    </button>
+                </div>
+            </div>
+        )
+    }
 
     const handleQuizAnswer = (questionId, answerIndex) => {
         setQuizAnswers({ ...quizAnswers, [questionId]: answerIndex })
     }
 
     const handleQuizSubmit = () => {
-        // منطق تصحيح بسيط (نفترض أن الإجابة الأولى دائماً صحيحة في الـ Mock أو حسب البيانات)
-        // هنا سنفترض النجاح للمحاكاة، لكن في الواقع يجب مقارنة الإجابات
-        const allAnswered = Object.keys(quizAnswers).length === lesson.quiz.questions.length
+        const allAnswered = Object.keys(quizAnswers).length === (lesson.quiz?.questions?.length || 0)
         
         if (allAnswered) {
             setQuizSubmitted(true)
-            
-            // محاكاة نتيجة النجاح (يمكنك تعقيدها بمقارنة الإجابات الحقيقية)
             const passed = true 
             setQuizPassed(passed)
 
             if (passed) {
-                completeLesson(lessonId) // تسجيل الإكمال فقط عند النجاح
-                // أنيميشن احتفالي بسيط
+                completeLesson(lessonId)
                 gsap.fromTo('.success-message', { scale: 0.8, opacity: 0 }, { scale: 1, opacity: 1, duration: 0.5, ease: 'back.out' })
             }
         }
     }
 
     const isNextLesson = lessonIndex < (course.lessons?.length || 0) - 1
-    const nextLessonId = isNextLesson ? `${courseId}_${lessonIndex + 2}` : null
+    const nextLessonId = isNextLesson ? `${courseId}_1_${lessonIndex + 2}` : null
 
     return (
         <>
@@ -84,7 +94,6 @@ const LessonViewer = () => {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                         {/* المحتوى الرئيسي */}
                         <div className="lg:col-span-2 space-y-8">
-                            {/* بطاقة الدرس */}
                             {!showQuiz ? (
                                 <div className="glass rounded-3xl p-8 border border-white/10 animate-fade-in">
                                     <div className="flex items-center gap-2 text-neon-blue mb-4">
@@ -94,12 +103,9 @@ const LessonViewer = () => {
                                     <h1 className="text-3xl font-bold mb-6">{lesson.title}</h1>
                                     
                                     <div className="prose prose-invert prose-lg max-w-none text-gray-300 leading-relaxed">
-                                        {lesson.content.split('\n').map((line, i) => (
-                                            <p key={i} className="mb-4">{line}</p>
-                                        ))}
+                                        <ReactMarkdown>{lesson.content || lesson.description || "محتوى الدرس..."}</ReactMarkdown>
                                     </div>
 
-                                    {/* زر الانتقال للكويز (إجباري) */}
                                     <div className="mt-12 pt-8 border-t border-white/10">
                                         <div className="flex items-center justify-between bg-neon-violet/10 p-4 rounded-xl border border-neon-violet/20">
                                             <div className="flex items-center gap-3">
@@ -126,75 +132,62 @@ const LessonViewer = () => {
                                         اختبار استيعاب: {lesson.title}
                                     </h2>
 
-                                    {lesson.quiz.questions.map((q, idx) => (
-                                        <div key={q.id} className="mb-8">
-                                            <p className="font-semibold mb-4">{idx + 1}. {q.question}</p>
-                                            <div className="space-y-2">
-                                                {q.options.map((opt, optIdx) => (
-                                                    <button
-                                                        key={optIdx}
-                                                        onClick={() => !quizSubmitted && handleQuizAnswer(q.id, optIdx)}
-                                                        disabled={quizSubmitted}
-                                                        className={`w-full text-left p-4 rounded-xl border transition-all ${
-                                                            quizAnswers[q.id] === optIdx 
-                                                                ? 'bg-neon-blue/20 border-neon-blue text-white' 
-                                                                : 'bg-white/5 border-white/10 hover:bg-white/10'
-                                                        } ${quizSubmitted && q.correct === optIdx ? 'bg-green-500/20 border-green-500' : ''}
-                                                          ${quizSubmitted && quizAnswers[q.id] === optIdx && q.correct !== optIdx ? 'bg-red-500/20 border-red-500' : ''}
-                                                        `}
-                                                    >
-                                                        {opt}
-                                                    </button>
-                                                ))}
+                                    {lesson.quiz?.questions ? (
+                                        lesson.quiz.questions.map((q, idx) => (
+                                            <div key={q.id || idx} className="mb-8">
+                                                <p className="font-semibold mb-4">{idx + 1}. {q.question}</p>
+                                                <div className="space-y-2">
+                                                    {q.options.map((opt, optIdx) => (
+                                                        <button
+                                                            key={optIdx}
+                                                            onClick={() => !quizSubmitted && handleQuizAnswer(q.id || idx, optIdx)}
+                                                            disabled={quizSubmitted}
+                                                            className={`w-full text-left p-4 rounded-xl border transition-all ${
+                                                                quizAnswers[q.id || idx] === optIdx 
+                                                                    ? 'bg-neon-blue/20 border-neon-blue text-white' 
+                                                                    : 'bg-white/5 border-white/10 hover:bg-white/10'
+                                                            }`}
+                                                        >
+                                                            {opt}
+                                                        </button>
+                                                    ))}
+                                                </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        ))
+                                    ) : (
+                                        <p className="text-gray-400 mb-4">لا يوجد أسئلة لهذا الدرس حالياً.</p>
+                                    )}
 
-                                    {!quizSubmitted ? (
+                                    {!quizSubmitted && lesson.quiz?.questions ? (
                                         <button
                                             onClick={handleQuizSubmit}
                                             disabled={Object.keys(quizAnswers).length < lesson.quiz.questions.length}
-                                            className={`w-full py-4 rounded-xl font-bold text-lg transition-all ${
-                                                Object.keys(quizAnswers).length < lesson.quiz.questions.length
-                                                    ? 'bg-slate-800 text-gray-500 cursor-not-allowed'
-                                                    : 'bg-gradient-to-r from-neon-blue to-neon-violet hover:scale-[1.02]'
-                                            }`}
+                                            className="w-full py-4 rounded-xl bg-gradient-to-r from-neon-blue to-neon-violet font-bold text-lg hover:scale-[1.02] transition-transform"
                                         >
                                             تسليم الإجابات
                                         </button>
                                     ) : (
                                         <div className="success-message text-center py-6">
-                                            {quizPassed ? (
-                                                <>
-                                                    <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
-                                                        <CheckCircle className="w-8 h-8 text-black" />
-                                                    </div>
-                                                    <h3 className="text-2xl font-bold text-green-400 mb-2">أحسنت! اجتزت الاختبار</h3>
-                                                    <p className="text-gray-400 mb-6">لقد تم فتح الدرس التالي في جدولك.</p>
-                                                    
-                                                    {nextLessonId && (
-                                                        <button
-                                                            onClick={() => navigate(`/lesson/${nextLessonId}`)}
-                                                            className="px-8 py-3 rounded-xl bg-white text-black font-bold hover:bg-gray-200 transition-colors flex items-center gap-2 mx-auto"
-                                                        >
-                                                            الدرس التالي <ChevronRight className="w-5 h-5" />
-                                                        </button>
-                                                    )}
-                                                </>
+                                            <div className="w-16 h-16 bg-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                                                <CheckCircle className="w-8 h-8 text-black" />
+                                            </div>
+                                            <h3 className="text-2xl font-bold text-green-400 mb-2">أحسنت!</h3>
+                                            <p className="text-gray-400 mb-6">تم تسجيل تقدمك بنجاح.</p>
+                                            
+                                            {nextLessonId ? (
+                                                <button
+                                                    onClick={() => navigate(`/lesson/${nextLessonId}`)}
+                                                    className="px-8 py-3 rounded-xl bg-white text-black font-bold hover:bg-gray-200 transition-colors flex items-center gap-2 mx-auto"
+                                                >
+                                                    الدرس التالي <ChevronRight className="w-5 h-5" />
+                                                </button>
                                             ) : (
-                                                <div>
-                                                    <p className="text-red-400 mb-4">لم تجتز الاختبار. يرجى مراجعة الدرس.</p>
-                                                    <button 
-                                                        onClick={() => {
-                                                            setShowQuiz(false)
-                                                            setQuizSubmitted(false)
-                                                            setQuizAnswers({})
-                                                        }}
-                                                        className="text-white underline"
-                                                    >
-                                                        إعادة المحاولة
-                                                    </button>
-                                                </div>
+                                                <button
+                                                    onClick={() => navigate('/certificate')}
+                                                    className="px-8 py-3 rounded-xl bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-bold hover:scale-105 transition-transform flex items-center gap-2 mx-auto"
+                                                >
+                                                    استلام الشهادة <Award className="w-5 h-5" />
+                                                </button>
                                             )}
                                         </div>
                                     )}
@@ -202,28 +195,19 @@ const LessonViewer = () => {
                             )}
                         </div>
 
-                        {/* الشريط الجانبي (قائمة الدروس) */}
+                        {/* Sidebar */}
                         <div className="lg:col-span-1">
                             <div className="glass rounded-3xl p-6 border border-white/10 sticky top-24">
                                 <h3 className="font-bold mb-4 text-gray-400">محتويات الكورس</h3>
                                 <div className="space-y-3">
                                     {course.lessons.map((l, idx) => {
-                                        // المنطق: الدرس مفتوح إذا كان الأول أو إذا تم إكمال الدرس السابق
-                                        // الدرس الحالي هو المفتوح وغير المكتمل
-                                        const lId = `${courseId}_${idx + 1}`
+                                        const lId = `${courseId}_1_${idx + 1}`
                                         const isDone = completedLessons.includes(lId)
-                                        const isCurrent = lId === lessonId
-                                        const isLocked = !isDone && !isCurrent && idx > 0 && !completedLessons.includes(`${courseId}_${idx}`)
-
+                                        const isCurrent = idx === lessonIndex
+                                        
                                         return (
                                             <div key={idx} className={`flex items-center gap-3 p-3 rounded-lg ${isCurrent ? 'bg-white/10 border border-neon-blue/30' : 'opacity-60'}`}>
-                                                {isDone ? (
-                                                    <CheckCircle className="w-5 h-5 text-green-500" />
-                                                ) : isLocked ? (
-                                                    <Lock className="w-5 h-5 text-gray-500" />
-                                                ) : (
-                                                    <div className="w-5 h-5 rounded-full border-2 border-neon-blue" />
-                                                )}
+                                                {isDone ? <CheckCircle className="w-5 h-5 text-green-500" /> : <div className="w-5 h-5 rounded-full border-2 border-neon-blue" />}
                                                 <span className={`text-sm ${isCurrent ? 'text-white font-bold' : 'text-gray-400'}`}>
                                                     {l.title}
                                                 </span>
@@ -240,4 +224,4 @@ const LessonViewer = () => {
     )
 }
 
-export default LessonViewer 
+export default LessonViewer

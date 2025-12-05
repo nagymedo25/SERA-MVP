@@ -80,3 +80,23 @@
   animation: pulse-slow 3s ease-in-out infinite;
 }
 
+@layer utilities {
+  /* إخفاء شريط التمرير مع الحفاظ على وظيفة السكرول */
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* تأثير النبض السحري للأيقونات */
+  .alive-pulse {
+    animation: alive 3s ease-in-out infinite;
+  }
+  
+  @keyframes alive {
+    0%, 100% { transform: scale(1); filter: drop-shadow(0 0 5px rgba(0, 217, 255, 0.5)); }
+    50% { transform: scale(1.05); filter: drop-shadow(0 0 15px rgba(168, 85, 247, 0.8)); }
+  }
+}

@@ -99,6 +99,95 @@ const useSimulationStore = create(
                 return false;
             },
 
+            // دالة إكمال الدرس (تفتح الدرس التالي)
+            completeLesson: (lessonId) => {
+                // lessonId format: "courseId_1_lessonIndex"
+                // نقوم بفصل الأجزاء لمعرفة الدرس الحالي والكورس
+                const parts = lessonId.split('_');
+                const lessonIndexStr = parts.pop(); 
+                const unitIndexStr = parts.pop();   
+                const courseId = parts.join('_');   
+                
+                const lIdx = parseInt(lessonIndexStr); // رقم الدرس الحالي (يبدأ من 1 حسب الرابط)
+
+                set(state => {
+                    // إضافة الدرس لقائمة المكتملات
+                    const newCompleted = [...state.completedLessons, lessonId];
+                    
+                    // تحديث حالة الـ Roadmap داخل الكورس لفتح الدرس التالي
+                    const updatedCourses = state.courses.map(c => {
+                        if (c.id !== courseId || !c.schedule) return c;
+                        
+                        const newRoadmap = c.schedule.roadmap.map(node => {
+                            // إذا كان هذا هو الدرس التالي للدرس المكتمل، اجعله unlocked
+                            // node.lessonIndex يبدأ من 0
+                            // lIdx هو رقم الدرس الحالي الذي اكتمل (مثلاً 1)
+                            // الدرس التالي هو في الاندكس lIdx
+                            if (node.lessonIndex === lIdx) { 
+                                return { ...node, status: 'unlocked' };
+                            }
+                             // تعليم الدرس الحالي كمكتمل
+                            if (node.lessonIndex === lIdx - 1) {
+                                return { ...node, status: 'completed' };
+                            }
+                            return node;
+                        });
+
+                        return { ...c, schedule: { ...c.schedule, roadmap: newRoadmap } };
+                    });
+
+                    return { 
+                        completedLessons: newCompleted,
+                        courses: updatedCourses
+                    };
+                });
+            },
+
+             // دالة محاكاة إكمال الدرس (Skip/Fast Forward)
+             simulateCompleteLesson: (courseId, lessonIndex) => {
+                const lessonId = `${courseId}_1_${lessonIndex + 1}`; // توحيد صيغة الـ ID
+                
+                set(state => {
+                    // 1. إضافته للمكتملة
+                    const newCompleted = [...state.completedLessons, lessonId];
+                    
+                    // 2. تحديث حالة الخريطة (Roadmap)
+                    const updatedCourses = state.courses.map(c => {
+                        if (c.id !== courseId || !c.schedule) return c;
+                        
+                        const newRoadmap = c.schedule.roadmap.map(node => {
+                            // الدرس الحالي يصبح مكتمل
+                            if (node.lessonIndex === lessonIndex) {
+                                return { ...node, status: 'completed' };
+                            }
+                            // الدرس التالي يصبح مفتوح
+                            if (node.lessonIndex === lessonIndex + 1) {
+                                return { ...node, status: 'unlocked' }; // أو 'current'
+                            }
+                            return node;
+                        });
+
+                        return { ...c, schedule: { ...c.schedule, roadmap: newRoadmap } };
+                    });
+
+                    return { 
+                        completedLessons: newCompleted,
+                        courses: updatedCourses
+                    };
+                });
+            },
+            
+            // بدء الامتحان النهائي للكورس
+            startFinalExam: async (courseId) => {
+                const course = get().courses.find(c => c.id === courseId);
+                set({ isGeneratingQuestions: true, currentAssessmentQuestions: [] });
+                // يمكن استخدام دالة خاصة للامتحان النهائي أو الدالة العامة مع تعديل بسيط
+                // هنا سنفترض وجود دالة أو استخدام الدالة العامة
+                // للتبسيط سنستخدم generateTechnicalQuestions لكن يفضل عمل دالة خاصة للامتحان الشامل
+                const questions = await AI.generateTechnicalQuestions({ level: 'advanced' }); // أو دالة generateCourseFinalExam إذا أضفتها
+                set({ currentAssessmentQuestions: questions, isGeneratingQuestions: false });
+            },
+
             // =================================================
             // 3. المصادقة (Auth)
             // =================================================
@@ -174,7 +263,6 @@ const useSimulationStore = create(
             refreshDashboard: async () => {
                 const { user, currentMode } = get();
                 if (!user) return;
-                // إذا كانت المهام موجودة لنفس المود لا داعي لإعادة الطلب (توفير للكوتة)
                 if (get().dailyTasks.length > 0) return;
 
                 set({ isAnalyzing: true });
@@ -252,13 +340,28 @@ const useSimulationStore = create(
             // 5. إجراءات مساعدة (Helpers)
             // =================================================
             enrollCourse: (id) => set(state => ({ enrolledCourses: [...state.enrolledCourses, id] })),
-            completeLesson: (id) => set(state => ({ completedLessons: [...state.completedLessons, id] })),
+            
             triggerBreathingExercise: () => set({ showBreathingExercise: true }),
             closeBreathingExercise: () => set({ showBreathingExercise: false }),
+            
             setCurrentMode: (mode) => {
                 set({ currentMode: mode, dailyTasks: [] }); // مسح المهام لإجبار التحديث
                 get().refreshDashboard();
             },
+            
+            // دالة Reset مفيدة للعرض التقديمي لمسح البيانات والبدء من جديد
+            resetDemo: () => {
+                set({
+                    user: null,
+                    courses: defaultCourses || [],
+                    enrolledCourses: [],
+                    completedLessons: [],
+                    assessmentHistory: [],
+                    dailyTasks: []
+                });
+                localStorage.removeItem('sera-storage');
+                window.location.href = '/';
+            }
         }),
         {
             name: 'sera-storage', // مفتاح LocalStorage
