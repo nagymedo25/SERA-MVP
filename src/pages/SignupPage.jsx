@@ -25,7 +25,7 @@ const SignupPage = () => {
         )
 
         // 2. Elements Slide In
-        tl.fromTo(".input-group", 
+        tl.fromTo(".input-group",
             { x: -30, opacity: 0 },
             { x: 0, opacity: 1, duration: 0.5, stagger: 0.1, ease: "power2.out" },
             "-=0.5"
@@ -45,24 +45,20 @@ const SignupPage = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         if (!signup) return;
-        const result = signup(formData.email, formData.password, formData.name); 
+
+        const result = signup(formData.email, formData.password, formData.name);
+
         if (result && result.success) {
-            // Exit animation
-            gsap.to(containerRef.current, {
-                y: -50,
-                opacity: 0,
-                duration: 0.3,
-                onComplete: () => navigate('/onboarding')
-            })
+            // ✅ التغيير هنا: التوجيه لاختيار المجال أولاً
+            navigate('/domain-selection');
         } else {
-            setError(result?.message || "An error occurred");
-            gsap.fromTo(formRef.current, { x: -5 }, { x: 5, duration: 0.05, repeat: 5, yoyo: true });
+            setError(result?.message || "حدث خطأ ما");
         }
     };
 
     return (
         <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6 relative overflow-hidden">
-            
+
             {/* --- Animated Background --- */}
             <div className="absolute inset-0 pointer-events-none">
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_center,rgba(168,85,247,0.1)_0%,transparent_70%)]" />
@@ -72,15 +68,15 @@ const SignupPage = () => {
             </div>
 
             {/* --- Main Card --- */}
-            <div 
+            <div
                 ref={containerRef}
                 className="relative z-10 w-full max-w-md"
             >
                 {/* Background Glow */}
                 <div className="absolute -inset-1 bg-gradient-to-r from-neon-violet to-neon-pink rounded-[32px] blur opacity-30 animate-pulse" />
-                
+
                 <div className="relative bg-slate-900 border border-white/10 rounded-[30px] p-8 md:p-12 shadow-2xl">
-                    
+
                     {/* Header */}
                     <div className="text-center mb-10">
                         <div className="header-icon inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-tr from-neon-violet/20 to-neon-pink/20 border border-white/10 mb-6 relative">
@@ -98,7 +94,7 @@ const SignupPage = () => {
                     )}
 
                     <form ref={formRef} onSubmit={handleSubmit} className="space-y-5">
-                        
+
                         {/* Name */}
                         <div className="input-group">
                             <div className="relative group">

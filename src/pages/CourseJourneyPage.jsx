@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import gsap from 'gsap'
 import { 
@@ -9,7 +9,6 @@ import ReactMarkdown from 'react-markdown'
 import Navbar from '../components/Navbar'
 import useSimulationStore from '../store/simulationStore'
 
-// ... (مكون LessonModal كما هو)
 const LessonModal = ({ lesson, courseId, lessonIndex, onClose, onComplete }) => {
     const [isCompleting, setIsCompleting] = useState(false);
     const handleComplete = () => {
@@ -55,9 +54,42 @@ const CourseJourneyPage = () => {
         if (!course) navigate('/courses')
     }, [course, navigate])
 
-    const roadmap = course?.schedule?.roadmap || []
-    const completedCount = roadmap.filter(n => n.status === 'completed').length
-    const hasCertificate = course?.hasCertificate; // التحقق من وجود الشهادة
+    // ========================================================
+    // ✅ الإصلاح: تصفية الخريطة (Roadmap Filtering)
+    // ========================================================
+    const { validRoadmap, progress, isFinalUnlocked, hasCertificate } = useMemo(() => {
+        if (!course) return { validRoadmap: [], progress: 0, isFinalUnlocked: false, hasCertificate: false };
+
+        const rawRoadmap = course.schedule?.roadmap || [];
+        const totalLessons = course.lessons.length;
+        const hasCert = course.hasCertificate;
+
+        // 1. نحتفظ فقط بالعقد التي تشير لدروس حقيقية موجودة في المصفوفة
+        // (ونتجاهل أي عقد إضافية هلوس بها الذكاء الاصطناعي خارج النطاق)
+        const validNodes = rawRoadmap.filter(node => {
+            if (node.type === 'failed_exam') return true; // الاحتفاظ بسجل الرسوب
+            return node.lessonIndex !== undefined && node.lessonIndex < totalLessons;
+        });
+
+        // 2. حساب عدد الدروس المكتملة من القائمة "الصحيحة" فقط
+        const lessonsOnly = validNodes.filter(n => n.type !== 'failed_exam');
+        const completedCount = lessonsOnly.filter(n => n.status === 'completed').length;
+        const totalValidLessons = lessonsOnly.length;
+
+        // 3. شرط الفتح: الشهادة موجودة، أو جميع الدروس الحقيقية مكتملة
+        const unlocked = hasCert || (totalValidLessons > 0 && completedCount === totalValidLessons);
+        
+        // 4. النسبة المئوية الدقيقة
+        const prog = hasCert ? 100 : (totalValidLessons === 0 ? 0 : (completedCount / totalValidLessons) * 100);
+
+        return { 
+            validRoadmap: validNodes, 
+            progress: prog, 
+            isFinalUnlocked: unlocked, 
+            hasCertificate: hasCert,
+            completedCount // نحتاجه للأنيميشن
+        };
+    }, [course]);
 
     // أنيميشن الدخول
     useEffect(() => {
@@ -69,13 +101,14 @@ const CourseJourneyPage = () => {
             const activeNode = document.querySelector('.node-active');
             if (activeNode) activeNode.scrollIntoView({ behavior: 'smooth', block: 'center' });
         }, 500);
-        prevCompletedCount.current = completedCount;
-    }, []);
+        prevCompletedCount.current = validRoadmap.filter(n => n.status === 'completed').length;
+    }, [validRoadmap.length]); // إعادة التشغيل عند تغير طول الخريطة
 
     // أنيميشن التقدم
     useEffect(() => {
-        if (completedCount > prevCompletedCount.current) {
-            const nextIndex = completedCount;
+        const currentCompleted = validRoadmap.filter(n => n.status === 'completed').length;
+        if (currentCompleted > prevCompletedCount.current) {
+            const nextIndex = currentCompleted; // تقريبي
             const tl = gsap.timeline();
             if (nodesRef.current[nextIndex]) {
                 tl.fromTo(nodesRef.current[nextIndex], 
@@ -86,21 +119,17 @@ const CourseJourneyPage = () => {
                 tl.to(nodesRef.current[nextIndex], { scale: 1.1, duration: 0.4 });
                 setTimeout(() => { nodesRef.current[nextIndex]?.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 800);
             }
-            prevCompletedCount.current = completedCount;
+            prevCompletedCount.current = currentCompleted;
         }
-    }, [completedCount]);
+    }, [validRoadmap]);
 
     if (!course) return null;
-
-    // إذا تم الحصول على الشهادة، النسبة 100%
-    const progress = hasCertificate ? 100 : (completedCount / roadmap.length) * 100;
-    const isFinalUnlocked = completedCount === roadmap.length;
 
     const handleSimulate = (cId, lIdx) => { simulateCompleteLesson(cId, lIdx); };
 
     const handleStartFinal = async () => {
         if (hasCertificate) {
-            navigate('/certificate'); // إذا لديه شهادة، يذهب لصفحة الشهادة
+            navigate('/certificate'); 
             return;
         }
         if (isGeneratingFinal) return;
@@ -157,9 +186,13 @@ const CourseJourneyPage = () => {
                 </div>
 
                 <div ref={scrollRef} className="max-w-lg mx-auto relative min-h-[60vh] pb-32">
+                    {/* SVG Line - يستخدم validRoadmap الآن لضمان عدم رسم خطوط فارغة */}
                     <svg className="absolute top-0 left-1/2 -translate-x-1/2 w-full h-full pointer-events-none z-0" style={{ overflow: 'visible' }}>
-                        <path d={`M 0 0 ${roadmap.map((_, i) => `L ${i % 2 === 0 ? -80 : 80} ${i * 160 + 100}`).join(' ')} L 0 ${(roadmap.length) * 160 + 150}`} fill="none" stroke="#1e293b" strokeWidth="4" strokeDasharray="12 12" strokeLinecap="round" />
-                        <path d={`M 0 0 ${roadmap.slice(0, completedCount + 1).map((_, i) => `L ${i % 2 === 0 ? -80 : 80} ${i * 160 + 100}`).join(' ')}`} fill="none" stroke={hasCertificate ? "url(#goldGradient)" : "url(#journeyGradient)"} strokeWidth="6" strokeLinecap="round" className={`drop-shadow-[0_0_15px_rgba(${hasCertificate ? '234,179,8' : '0,217,255'},0.5)] transition-all duration-1000 ease-in-out`} />
+                        <path d={`M 0 0 ${validRoadmap.map((_, i) => `L ${i % 2 === 0 ? -80 : 80} ${i * 160 + 100}`).join(' ')} L 0 ${(validRoadmap.length) * 160 + 150}`} fill="none" stroke="#1e293b" strokeWidth="4" strokeDasharray="12 12" strokeLinecap="round" />
+                        
+                        {/* الخط الملون يتبع التقدم الفعلي */}
+                        <path d={`M 0 0 ${validRoadmap.slice(0, validRoadmap.filter(n => n.status === 'completed').length + 1).map((_, i) => `L ${i % 2 === 0 ? -80 : 80} ${i * 160 + 100}`).join(' ')}`} fill="none" stroke={hasCertificate ? "url(#goldGradient)" : "url(#journeyGradient)"} strokeWidth="6" strokeLinecap="round" className={`drop-shadow-[0_0_15px_rgba(${hasCertificate ? '234,179,8' : '0,217,255'},0.5)] transition-all duration-1000 ease-in-out`} />
+                        
                         <defs>
                             <linearGradient id="journeyGradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#00d9ff" /><stop offset="100%" stopColor="#a855f7" /></linearGradient>
                             <linearGradient id="goldGradient" x1="0%" y1="0%" x2="0%" y2="100%"><stop offset="0%" stopColor="#fbbf24" /><stop offset="100%" stopColor="#d97706" /></linearGradient>
@@ -170,10 +203,11 @@ const CourseJourneyPage = () => {
                         <div className={`bg-slate-900 border-2 px-8 py-3 rounded-full font-bold shadow-lg animate-float ${hasCertificate ? 'border-yellow-500 text-yellow-400 shadow-yellow-500/20' : 'border-neon-blue/50 text-neon-blue shadow-[0_0_30px_rgba(0,217,255,0.2)]'}`}>START 🚩</div>
                     </div>
 
-                    {roadmap.map((node, index) => {
+                    {/* عرض العقد (Valid Nodes Only) */}
+                    {validRoadmap.map((node, index) => {
                         const isLeft = index % 2 === 0;
                         const isActive = (node.status === 'unlocked' || node.status === 'current') && !hasCertificate;
-                        const isCompleted = node.status === 'completed' || hasCertificate; // إذا حصل على الشهادة، الكل يعتبر مكتمل بصرياً
+                        const isCompleted = node.status === 'completed' || hasCertificate; 
                         const isLocked = node.status === 'locked' && !hasCertificate;
 
                         if (node.type === 'failed_exam') {
@@ -249,13 +283,12 @@ const CourseJourneyPage = () => {
                                 ${hasCertificate 
                                     ? 'border-yellow-400 text-yellow-400 shadow-[0_0_100px_rgba(250,204,21,0.6)] scale-110' 
                                     : isFinalUnlocked
-                                        ? 'border-neon-violet text-neon-violet shadow-[0_0_80px_rgba(168,85,247,0.4)] hover:scale-105'
-                                        : 'border-slate-800 text-slate-700 grayscale'
+                                        ? 'border-neon-violet text-neon-violet shadow-[0_0_80px_rgba(168,85,247,0.4)] hover:scale-105 cursor-pointer'
+                                        : 'border-slate-800 text-slate-700 grayscale cursor-not-allowed'
                                 }
                                 ${isGeneratingFinal ? 'cursor-wait opacity-80' : ''} 
                             `}
                         >
-                            {/* تأثير التوهج الذهبي عند الشهادة */}
                             {(isFinalUnlocked || hasCertificate) && !isGeneratingFinal && <div className={`absolute inset-0 blur-3xl rounded-full animate-pulse ${hasCertificate ? 'bg-yellow-500/30' : 'bg-neon-violet/20'}`} />}
                             
                             {isGeneratingFinal ? (

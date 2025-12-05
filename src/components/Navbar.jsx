@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom' 
 import gsap from 'gsap'
-import { Menu, X, Home, BookOpen, BarChart3, User, LogOut } from 'lucide-react' // ❌ تمت إزالة FileText
+import { Menu, X, Home, BookOpen, BarChart3, User, LogOut, Crown } from 'lucide-react' // تم استيراد Crown
 import useSimulationStore from '../store/simulationStore'
 import LanguageSwitcher from './LanguageSwitcher'
 import { useLanguage } from '../contexts/LanguageContext'
@@ -20,6 +20,7 @@ const Navbar = () => {
     const isLandingPage = location.pathname === '/'
     const isOnboarding = location.pathname === '/onboarding'
 
+    // ... (باقي الكود السابق للدالة handleLogout و useEffect) ...
     const handleLogout = () => {
         logout(); 
         navigate('/');
@@ -50,7 +51,6 @@ const Navbar = () => {
         { label: t('navbar.contact'), id: 'cta' },
     ]
 
-    // ✅ تم إزالة رابط الـ Assessment من هنا
     const appNavItems = [
         { label: t('navbar.dashboard'), path: '/dashboard', icon: Home },
         { label: t('navbar.courses'), path: '/courses', icon: BookOpen },
@@ -106,6 +106,13 @@ const Navbar = () => {
 
                     {/* Action Buttons */}
                     <div className="flex items-center gap-4">
+                        
+                        {/* ✅ زر التاج (الأسعار) */}
+                        <Link to="/pricing" className="group relative w-10 h-10 flex items-center justify-center rounded-full border border-yellow-500/30 bg-yellow-500/10 hover:bg-yellow-500/20 transition-all hover:scale-110">
+                            <Crown className="w-5 h-5 text-yellow-400 group-hover:rotate-12 transition-transform" />
+                            <div className="absolute inset-0 rounded-full animate-pulse bg-yellow-400/20 blur-md opacity-0 group-hover:opacity-100 transition-opacity" />
+                        </Link>
+
                         <LanguageSwitcher />
                         
                         {isLandingPage ? (
@@ -133,6 +140,14 @@ const Navbar = () => {
             {/* Mobile Menu */}
             <div className={`md:hidden absolute top-full left-0 right-0 glass overflow-hidden transition-all duration-300 ${isMobileMenuOpen ? 'max-h-96 border-t border-white/10' : 'max-h-0'}`}>
                  <ul className="px-6 py-4 space-y-4">
+                    {/* إضافة رابط الأسعار للموبايل */}
+                    <li>
+                        <Link to="/pricing" onClick={() => setIsMobileMenuOpen(false)} className="flex items-center gap-2 text-yellow-400 hover:text-yellow-300 py-2">
+                            <Crown className="w-5 h-5" />
+                            <span>Pricing Plans</span>
+                        </Link>
+                    </li>
+
                     {(isLandingPage ? landingNavItems : appNavItems).map((item) => (
                         <li key={item.id || item.path}>
                             {isLandingPage ? (

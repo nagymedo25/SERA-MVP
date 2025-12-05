@@ -36,11 +36,10 @@ const useSimulationStore = create(
             // =================================================
             // 2. وظائف المطور (Dev Tools) - المحدثة
             // =================================================
-// ✅ تحديث دالة المطور لتجاوز الـ Onboarding بقوة
-            forcePassExam: () => {
-                const { user, courses } = get();
+forcePassExam: () => {
+                const { user, courses, currentAssessmentQuestions } = get();
 
-                // السيناريو 1: المستخدم في Onboarding
+                // 1️⃣ حالة الـ Onboarding
                 if (user && !user.hasCompletedOnboarding) {
                     const fakeExpertProfile = {
                         mindprint: { traits: { focus: 95, resilience: 90, openness: 85 } },
@@ -53,59 +52,62 @@ const useSimulationStore = create(
                     };
 
                     set(state => ({
-                        user: { 
-                            ...state.user, 
-                            hasCompletedOnboarding: true,
-                            ...fakeExpertProfile
-                        },
+                        user: { ...state.user, hasCompletedOnboarding: true, ...fakeExpertProfile },
                         onboardingResult: fakeExpertProfile.recommendation,
                         isAnalyzing: false,
                         isGeneratingQuestions: false
                     }));
-                    return; 
+                    return;
                 }
 
-                // السيناريو 2: المستخدم في كورس (اجتياز الامتحان)
-                const activeCourse = courses.find(c => c.isScheduled) || courses[0];
-                if (!activeCourse) return;
+                // 2️⃣ حالة الامتحان (سواء نهائي أو تدريب)
+                // إذا كان هناك أسئلة معروضة، فهذا يعني أن المستخدم في امتحان
+                if (currentAssessmentQuestions.length > 0) {
+                    const activeCourse = courses.find(c => c.isScheduled) || courses[0];
+                    const isFinalExam = !!activeCourse; // نعتبره نهائي إذا وجدنا كورس
 
-                const fakeSuccessReport = {
-                    score: 100,       
-                    finalScore: 100,
-                    passed: true,
-                    summary: "Developer Override: Outstanding performance demonstrated across all modules.",
-                    feedback: "تم اجتياز الاختبار بنجاح تام عبر وضع المطور. الأداء مثالي.",
-                    emotionalState: "Confident"
-                };
-
-                set(state => {
-                    const newHistory = {
-                        date: new Date().toISOString(),
-                        type: 'Dev Override',
-                        courseTitle: activeCourse.title,
-                        score: 100,
+                    const fakeReport = {
+                        score: 100,       
+                        finalScore: 100,
                         passed: true,
-                        summary: fakeSuccessReport.summary
+                        summary: "Developer Override: Perfect Score injected.",
+                        feedback: "تم تجاوز الاختبار بنجاح تام باستخدام أدوات المطور. جميع الإجابات صحيحة.",
+                        emotionalState: "Confident"
                     };
 
-                    const updatedCourses = state.courses.map(c => 
-                        c.id === activeCourse.id 
-                        ? { ...c, hasCertificate: true, completedAt: new Date().toISOString() } 
-                        : c
-                    );
+                    set(state => {
+                        const newHistory = {
+                            date: new Date().toISOString(),
+                            type: isFinalExam ? 'Final Exam (Dev)' : 'Skill Check (Dev)',
+                            courseTitle: activeCourse ? activeCourse.title : 'General Assessment',
+                            score: 100,
+                            passed: true,
+                            summary: fakeReport.summary
+                        };
 
-                    return {
-                        assessmentHistory: [...state.assessmentHistory, newHistory],
-                        courses: updatedCourses,
-                        finalReport: fakeSuccessReport,
-                        isAnalyzing: false,
-                        isGeneratingQuestions: false
-                    };
-                });
+                        let updatedCourses = state.courses;
+                        // لو كان تابع لكورس، نعطيه الشهادة
+                        if (isFinalExam && activeCourse) {
+                            updatedCourses = state.courses.map(c => 
+                                c.id === activeCourse.id 
+                                ? { ...c, hasCertificate: true, completedAt: new Date().toISOString() } 
+                                : c
+                            );
+                        }
+
+                        return {
+                            assessmentHistory: [...state.assessmentHistory, newHistory],
+                            courses: updatedCourses,
+                            finalReport: fakeReport, // ✅ هذا سيجبر الـ AssessmentPage على عرض شاشة النجاح
+                            isAnalyzing: false,
+                            isGeneratingQuestions: false,
+                            isEvaluating: false
+                        };
+                    });
+                }
             },
 
             clearFinalReport: () => set({ finalReport: null }),
-            // دالة لتنظيف الـ Onboarding عند الخروج
             clearOnboardingResult: () => set({ onboardingResult: null }),
 
             // =================================================
@@ -124,9 +126,11 @@ const useSimulationStore = create(
                 return false;
             },
 
+// ✅ تصحيح جذري لدالة الحذف: تحذف الكورس المحدد بغض النظر عن حالته
             deleteCourse: (courseId) => {
                 set(state => ({
-                    courses: state.courses.filter(c => c.id !== courseId || !c.hasCertificate),
+                    // نحتفظ فقط بالكورسات التي لا تحمل هذا الـ ID
+                    courses: state.courses.filter(c => c.id !== courseId),
                     enrolledCourses: state.enrolledCourses.filter(id => id !== courseId)
                 }));
             },
@@ -296,10 +300,15 @@ const useSimulationStore = create(
                 return false;
             },
 
+// ✅ تحديث دالة التقييم العام لتحدد النجاح/الرسوب
             finalizeAssessmentAI: async () => {
                 set({ isAnalyzing: true });
                 const analysis = await AI.generateFinalAnalysis(get().assessmentSession, get().user);
+                
                 if (analysis) {
+                    // نعتبر النتيجة نجاح إذا كانت فوق 60%
+                    const isPassed = analysis.finalScore >= 60; 
+                    
                     set(state => {
                         const updatedUser = { 
                             ...state.user, 
@@ -313,7 +322,8 @@ const useSimulationStore = create(
                                 score: analysis.finalScore, 
                                 summary: analysis.summary 
                             }],
-                            finalReport: analysis,
+                            // نضيف خاصية passed للتقرير
+                            finalReport: { ...analysis, passed: isPassed }, 
                             isAnalyzing: false
                         }
                     });
