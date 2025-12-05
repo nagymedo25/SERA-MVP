@@ -290,7 +290,7 @@ function LandingPage() {
                     </div>
 
                     <div className="flex justify-center">
-                        <Link to="/onboarding">
+                        <Link to="/domain-selection">
                             <button
                                 ref={ctaButtonRef}
                                 className="group relative px-12 py-6 text-xl font-semibold rounded-2xl bg-gradient-to-r from-neon-blue to-neon-violet glow-blue transition-all duration-300 hover:scale-105 hover:glow-violet"

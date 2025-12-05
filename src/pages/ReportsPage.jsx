@@ -283,6 +283,21 @@ const ReportsPage = () => {
                     </div>
                 </div>
             </div>
+
+            {/* زر الانتقال للمرحلة التالية */}
+            <div className="mt-12 text-center pb-8">
+                <button
+                    onClick={() => window.location.href = '/course-setup'}
+                    className="group relative px-10 py-5 text-xl font-bold rounded-2xl bg-gradient-to-r from-neon-blue to-neon-violet text-white shadow-lg hover:scale-105 transition-all duration-300"
+                >
+                    <span className="relative z-10 flex items-center gap-2">
+                        تخصيص الكورس بناءً على نتيجتك
+                        <TrendingUp className="w-6 h-6 group-hover:translate-x-1 transition-transform" />
+                    </span>
+                    <div className="absolute inset-0 rounded-2xl bg-white/20 blur-lg opacity-0 group-hover:opacity-50 transition-opacity" />
+                </button>
+                <p className="text-gray-500 mt-4 text-sm">سيتم استخدام بيانات أدائك لبناء منهج مخصص لك</p>
+            </div>
         </>
     )
 }
