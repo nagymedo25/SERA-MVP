@@ -36,10 +36,11 @@ const useSimulationStore = create(
             // =================================================
             // 2. وظائف المطور (Dev Tools) - المحدثة
             // =================================================
+// ✅ تحديث دالة المطور لتجاوز الـ Onboarding بقوة
             forcePassExam: () => {
                 const { user, courses } = get();
 
-                // 🅰️ سيناريو 1: المستخدم في مرحلة الـ Onboarding
+                // السيناريو 1: المستخدم في Onboarding
                 if (user && !user.hasCompletedOnboarding) {
                     const fakeExpertProfile = {
                         mindprint: { traits: { focus: 95, resilience: 90, openness: 85 } },
@@ -51,23 +52,20 @@ const useSimulationStore = create(
                         }
                     };
 
-                    set(state => {
-                        const updatedUser = { 
+                    set(state => ({
+                        user: { 
                             ...state.user, 
                             hasCompletedOnboarding: true,
                             ...fakeExpertProfile
-                        };
-                        return {
-                            user: updatedUser,
-                            onboardingResult: fakeExpertProfile.recommendation, // ✅ تحديث النتيجة لتظهر في الصفحة
-                            isAnalyzing: false,
-                            isGeneratingQuestions: false
-                        };
-                    });
-                    return; // إنهاء الدالة هنا
+                        },
+                        onboardingResult: fakeExpertProfile.recommendation,
+                        isAnalyzing: false,
+                        isGeneratingQuestions: false
+                    }));
+                    return; 
                 }
 
-                // 🅱️ سيناريو 2: المستخدم في كورس (المنطق السابق)
+                // السيناريو 2: المستخدم في كورس (اجتياز الامتحان)
                 const activeCourse = courses.find(c => c.isScheduled) || courses[0];
                 if (!activeCourse) return;
 

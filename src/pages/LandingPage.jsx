@@ -10,14 +10,15 @@ import TechnologiesSection from '../components/TechnologiesSection'
 import TestimonialsSection from '../components/TestimonialsSection'
 import Footer from '../components/Footer'
 import Logo from '../assets/Logo.png'
-import { Code, Sparkles, ChevronRight } from 'lucide-react'
-import useSimulationStore from '../store/simulationStore' // إضافة لاستدعاء الستور
+// ✅ أضفت أيقونات Zap و Shield للكروت الجديدة
+import { Code, Sparkles, ChevronRight, Zap, Shield } from 'lucide-react'
+import useSimulationStore from '../store/simulationStore'
 
 gsap.registerPlugin(ScrollTrigger)
 
 function LandingPage() {
     const { t } = useLanguage()
-    const { user } = useSimulationStore() // للتحقق من حالة الدخول
+    const { user } = useSimulationStore()
     const heroSectionRef = useRef(null)
     const heroTextRef = useRef(null)
     const mindprintRef = useRef(null)
@@ -29,7 +30,6 @@ function LandingPage() {
     useEffect(() => {
         // Hero Section Animations
         if (heroTextRef.current) {
-            // ✅ إصلاح الخطأ: تحريك العنصر نفسه بدلاً من .children
             gsap.fromTo(
                 heroTextRef.current,
                 { opacity: 0, y: 20 },
@@ -184,6 +184,7 @@ function LandingPage() {
                         className="flex gap-8 px-8"
                         style={{ width: 'fit-content' }}
                     >
+                        {/* Card 1: Psychological Scan */}
                         <div className="mindprint-card min-w-[500px] h-[600px] glass rounded-3xl p-12 flex flex-col justify-between">
                             <div className="space-y-6">
                                 <div className="w-20 h-20 flex items-center justify-center">
@@ -204,6 +205,7 @@ function LandingPage() {
                             <div className="w-full h-1 bg-gradient-to-r from-neon-violet to-transparent rounded-full" />
                         </div>
 
+                        {/* Card 2: Skill Assessment */}
                         <div className="mindprint-card min-w-[500px] h-[600px] glass rounded-3xl p-12 flex flex-col justify-between">
                             <div className="space-y-6">
                                 <div className="w-20 h-20 rounded-2xl bg-neon-blue/20 glow-blue flex items-center justify-center">
@@ -220,6 +222,7 @@ function LandingPage() {
                             <div className="w-full h-1 bg-gradient-to-r from-neon-blue to-transparent rounded-full" />
                         </div>
 
+                        {/* Card 3: Life Trajectory */}
                         <div className="mindprint-card min-w-[500px] h-[600px] glass rounded-3xl p-12 flex flex-col justify-between">
                             <div className="space-y-6">
                                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-neon-blue to-neon-violet glow-violet flex items-center justify-center">
@@ -235,6 +238,41 @@ function LandingPage() {
                             </div>
                             <div className="w-full h-1 bg-gradient-to-r from-neon-blue via-neon-violet to-transparent rounded-full" />
                         </div>
+
+                        {/* ✅ Card 4: Real-time Adaptation (New) */}
+                        <div className="mindprint-card min-w-[500px] h-[600px] glass rounded-3xl p-12 flex flex-col justify-between">
+                            <div className="space-y-6">
+                                <div className="w-20 h-20 rounded-2xl bg-cyan-500/20 glow-blue flex items-center justify-center">
+                                    <Zap className="w-10 h-10 text-cyan-400" />
+                                </div>
+                                <div>
+                                    <div className="text-sm text-cyan-400 font-mono mb-2">STEP 04</div>
+                                    <h3 className="text-4xl font-bold mb-4">{t('landing.features.realtimeAdaptation')}</h3>
+                                    <p className="text-gray-400 text-lg leading-relaxed">
+                                        {t('landing.features.realtimeAdaptationDesc')}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="w-full h-1 bg-gradient-to-r from-cyan-400 to-transparent rounded-full" />
+                        </div>
+
+                        {/* ✅ Card 5: Burnout Prevention (New) */}
+                        <div className="mindprint-card min-w-[500px] h-[600px] glass rounded-3xl p-12 flex flex-col justify-between">
+                            <div className="space-y-6">
+                                <div className="w-20 h-20 rounded-2xl bg-emerald-500/20 glow-green flex items-center justify-center">
+                                    <Shield className="w-10 h-10 text-emerald-400" />
+                                </div>
+                                <div>
+                                    <div className="text-sm text-emerald-400 font-mono mb-2">STEP 05</div>
+                                    <h3 className="text-4xl font-bold mb-4">{t('landing.features.burnoutPrevention')}</h3>
+                                    <p className="text-gray-400 text-lg leading-relaxed">
+                                        {t('landing.features.burnoutPreventionDesc')}
+                                    </p>
+                                </div>
+                            </div>
+                            <div className="w-full h-1 bg-gradient-to-r from-emerald-400 to-transparent rounded-full" />
+                        </div>
+
                     </div>
                 </div>
             </section>
@@ -273,7 +311,8 @@ function LandingPage() {
                     </div>
 
                     <div className="flex justify-center">
-                        <Link to={user ? "/dashboard" : "/onboarding"}>
+                        {/* ✅ تم تحديث الرابط ليوجه دائماً إلى صفحة Onboarding */}
+                        <Link to="/onboarding">
                             <button
                                 ref={ctaButtonRef}
                                 className="group relative px-12 py-6 text-xl font-semibold rounded-2xl bg-gradient-to-r from-neon-blue to-neon-violet glow-blue transition-all duration-300 hover:scale-105 hover:glow-violet"

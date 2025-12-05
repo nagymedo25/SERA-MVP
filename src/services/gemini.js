@@ -40,30 +40,20 @@ const parseAIResponse = (text) => {
     }
 };
 
-// --- 1. (جديد) توليد أسئلة الـ Onboarding ---
+// 1. Onboarding معقد
 export const generateOnboardingQuestionsAI = async () => {
     const prompt = `
-        Act as a Professional Career & Psychology Profiler.
-        Generate a set of 5 dynamic onboarding questions to assess a user's coding potential and psychological state.
+        Act as a Psychological & Technical Profiler.
+        Generate 5 diverse onboarding questions.
         
-        Mix: 
-        - 2 Psychological/Behavioral questions (Focus, Stress).
-        - 2 Technical Concept questions (Logic, Problem Solving - No code writing, just conceptual MCQ).
-        - 1 Career Goal question.
+        Mix these types:
+        1. "psychology": Behavior/Stress check (MCQ).
+        2. "logic_puzzle": A conceptual problem solving question (No code needed, just logic MCQ).
+        3. "spot_concept": A technical concept question (e.g., "What principle is violated here?").
+        4. "career_goal": Future path.
 
-        Return Valid JSON Array:
-        [
-            {
-                "id": "q1",
-                "type": "mcq", 
-                "category": "psychology",
-                "question": "...",
-                "options": [
-                    { "value": "a", "label": "..." },
-                    { "value": "b", "label": "..." }
-                ]
-            }
-        ]
+        Format (JSON Array):
+        [{ "id": "q1", "category": "psychology", "type": "mcq", "question": "...", "options": [...] }]
     `;
     try {
         const res = await model.generateContent(prompt);
@@ -125,11 +115,22 @@ export const generateDailyTasksAI = async (userProfile, mood, dueLessons = []) =
   } catch (e) { return []; }
 };
 
-// --- 3. Technical Questions (Practice) ---
+// 3. تحديث الأسئلة التقنية (التدريب) لتكون متنوعة
 export const generateTechnicalQuestions = async (userProfile) => {
   const prompt = `
-    Generate 5 technical questions for a ${userProfile.level} level developer.
-    Return JSON array: [{ "id": "unique", "type": "mcq" | "debug", "question": "...", "options": [{ "value": "a", "label": "Option A" }, ...], "correctAnswer": "a", "difficulty": "..." }]
+    Generate 5 technical questions for a ${userProfile.level} developer.
+    CRITICAL: Do NOT just use MCQs. VARY the types to test depth.
+    
+    Types to include:
+    1. "mcq": Conceptual.
+    2. "spot_bug": Provide a small code snippet with a bug.
+    3. "fill_code": Code with a blank.
+    
+    JSON Format:
+    [
+      { "id": "1", "type": "spot_bug", "question": "Find the error", "codeSnippet": "...", "correctAnswer": "..." },
+      { "id": "2", "type": "mcq", "question": "...", "options": [...] }
+    ]
   `;
   try {
     const res = await model.generateContent(prompt);
@@ -228,29 +229,40 @@ export const generateCourseScheduleAI = async (courseDetails, userRoutine, userP
   } catch (error) { return null; }
 };
 
-// --- 9. Final Exam Generation ---
+// --- 9. Complex Final Exam Generation (Updated) ---
 export const generateCourseFinalExam = async (courseTitle, lessons) => {
   const topics = lessons ? lessons.map(l => l.title).join(', ') : 'Core concepts';
   const prompt = `
-      Act as a Senior Technical Instructor.
-      Generate a final exam for the course: "${courseTitle}".
-      Focus on these topics: ${topics}.
+      Act as a Brutal Senior Technical Interviewer & Cognitive Psychologist.
+      Generate a high-intensity final exam for: "${courseTitle}".
+      Topics: ${topics}.
       
-      Response Format (JSON ONLY):
+      Generate 5-7 questions. You MUST vary the "type" to squeeze the user's brain.
+      
+      Supported Types:
+      1. "mcq": Hard multiple choice with tricky distractors.
+      2. "spot_bug": Provide code with a subtle logic/syntax error. User must find the line number or fix it.
+      3. "fill_code": Code with missing critical parts (____).
+      4. "logic_order": A list of steps/code lines that need to be arranged correctly.
+      
+      Response Format (Strict JSON Array):
       [
         {
-          "id": "final_1",
-          "type": "mcq",
-          "question": "Question text here?",
-          "options": [
-            { "value": "a", "label": "Answer A" },
-            { "value": "b", "label": "Answer B" },
-            { "value": "c", "label": "Answer C" },
-            { "value": "d", "label": "Answer D" }
-          ],
-          "correctAnswer": "b",
+          "id": "q1",
+          "type": "spot_bug",
+          "question": "Find the bug in this memory management code. It causes a leak.",
+          "codeSnippet": "function create() {\\n  const data = new Array(1000);\\n  // ... missing cleanup\\n  return () => console.log(data);\\n}",
+          "correctAnswer": "Closure retains 'data' indefinitely",
           "difficulty": "hard"
+        },
+        {
+          "id": "q2",
+          "type": "logic_order",
+          "question": "Arrange these lines to fetch data and handle errors correctly.",
+          "items": ["try {", "const res = await fetch(url);", "const data = await res.json();", "} catch(e) { console.error(e) }"],
+          "correctOrder": [0, 1, 2, 3] // Indices
         }
+        // ... more questions
       ]
     `;
   try {
