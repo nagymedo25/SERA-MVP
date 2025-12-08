@@ -1,7 +1,7 @@
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(import.meta.env.VITE_GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-2.0-flash" }); // يفضل استخدام موديل سريع وذكي
+const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" }); // يفضل استخدام موديل سريع وذكي
 
 // --- Helper: Safe JSON Extractor ---
 // دالة لتنظيف ردود الـ AI واستخراج الـ JSON فقط لمنع الأخطاء

@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react'
 import Editor from '@monaco-editor/react'
-import { 
-    CheckCircle, XCircle, Timer, Brain, Loader, ArrowRight, 
-    Award, Hammer, AlertOctagon, Bug, ListOrdered, Code2, 
-    Lightbulb, ShieldAlert, Play 
+import {
+    CheckCircle, XCircle, Timer, Brain, Loader, ArrowRight,
+    Award, Hammer, AlertOctagon, Bug, ListOrdered, Code2,
+    Lightbulb, ShieldAlert, Play
 } from 'lucide-react'
 import useSimulationStore from '../store/simulationStore'
 import Navbar from '../components/Navbar'
@@ -17,8 +17,8 @@ const AssessmentPage = () => {
     // نعتبره وضع نهائي إذا كان الرابط يحتوي على mode=final
     const isFinalMode = searchParams.get('mode') === 'final'
 
-    const { 
-        startNewAssessment, currentAssessmentQuestions, isGeneratingQuestions, 
+    const {
+        startNewAssessment, currentAssessmentQuestions, isGeneratingQuestions,
         submitAnswerToAI, submitFinalExam, activateRemedialMode,
         isEvaluating, finalizeAssessmentAI, isAnalyzing, courses,
         finalReport, clearFinalReport, startFinalExam
@@ -26,13 +26,13 @@ const AssessmentPage = () => {
 
     // حالة المقدمة السينمائية (تظهر مرة واحدة في البداية)
     const [introComplete, setIntroComplete] = useState(false)
-    
+
     // حالات إدارة الأسئلة
     const [currentIndex, setCurrentIndex] = useState(0)
     const [userCode, setUserCode] = useState('')
     const [selectedOption, setSelectedOption] = useState(null)
     const [orderedItems, setOrderedItems] = useState([])
-    const [feedback, setFeedback] = useState(null) 
+    const [feedback, setFeedback] = useState(null)
     const [timeOnQuestion, setTimeOnQuestion] = useState(0)
     const [finalExamAnswers, setFinalExamAnswers] = useState({})
     const [violations, setViolations] = useState(0)
@@ -45,13 +45,13 @@ const AssessmentPage = () => {
     useEffect(() => {
         const initExam = async () => {
             clearFinalReport();
-            
+
             // إذا لم تكن هناك أسئلة، يجب توليدها
             if (!currentAssessmentQuestions || currentAssessmentQuestions.length === 0) {
                 if (isFinalMode) {
                     // محاولة العثور على كورس مجدول حالياً
                     const activeCourse = courses.find(c => c.isScheduled) || courses[0];
-                    
+
                     if (activeCourse) {
                         // الحالة الطبيعية: امتحان نهائي لكورس معين
                         await startFinalExam(activeCourse.id);
@@ -81,7 +81,7 @@ const AssessmentPage = () => {
         let interval;
         // المؤقت يعمل إذا لم يكن هناك تقرير نهائي، وإذا لم نكن نعرض الفيدباك (في التدريب)
         const shouldRunTimer = isFinalMode ? !finalReport : (!feedback && !finalReport);
-        
+
         if (shouldRunTimer && question) {
             interval = setInterval(() => setTimeOnQuestion(prev => prev + 1), 1000);
         }
@@ -92,9 +92,9 @@ const AssessmentPage = () => {
         if (question) {
             // تجهيز الكود الافتراضي
             setUserCode(question.codeSnippet || question.starterCode || '');
-            
+
             const savedAnswer = finalExamAnswers[question.id];
-            
+
             // تجهيز حالة نوع الترتيب
             if (question.type === 'logic_order') {
                 // خلط العناصر عشوائياً في البداية لضمان عدم سهولة الحل
@@ -102,7 +102,7 @@ const AssessmentPage = () => {
             } else {
                 setSelectedOption(savedAnswer ? savedAnswer.answer : null);
             }
-            
+
             if (!isFinalMode) setFeedback(null);
             setTimeOnQuestion(0);
         }
@@ -121,7 +121,7 @@ const AssessmentPage = () => {
         if (isFinalMode) {
             // تخزين الإجابة محلياً للانتقال للتالي
             setFinalExamAnswers(prev => ({ ...prev, [question.id]: { answer, time: timeOnQuestion } }));
-            
+
             if (currentIndex < currentAssessmentQuestions.length - 1) {
                 setCurrentIndex(prev => prev + 1);
             } else {
@@ -141,24 +141,24 @@ const AssessmentPage = () => {
         if (question.type === 'logic_order') currentAns = orderedItems;
         else if (question.type === 'spot_bug' || question.type === 'fill_code') currentAns = userCode || selectedOption;
         else currentAns = selectedOption;
-        
+
         allAnswers[question.id] = { answer: currentAns, time: timeOnQuestion };
-        
+
         const totalTime = Object.values(allAnswers).reduce((acc, curr) => acc + curr.time, 0);
         const activeCourse = courses.find(c => c.isScheduled) || courses[0];
-        
+
         if (activeCourse) {
-            await submitFinalExam(activeCourse.id, allAnswers, totalTime); 
+            await submitFinalExam(activeCourse.id, allAnswers, totalTime);
         } else {
             // ✅ معالجة حالة "بدون كورس" (Expert Placement Test)
-            await finalizeAssessmentAI(); 
+            await finalizeAssessmentAI();
         }
     };
 
     // =========================================================
     // 4. مكونات العرض (UI Components)
     // =========================================================
-    
+
     // مكون لتلوين الكلمات المفتاحية في السؤال
     const QuestionText = ({ text }) => {
         if (!text) return null;
@@ -186,21 +186,21 @@ const AssessmentPage = () => {
                         <div className="border border-white/10 rounded-2xl overflow-hidden shadow-2xl bg-[#1e1e1e]">
                             <div className="bg-white/5 px-4 py-2 text-xs text-gray-500 font-mono border-b border-white/5 flex justify-between">
                                 <span>buggy_code.js</span>
-                                <span className="flex items-center gap-1 text-red-400"><ShieldAlert size={12}/> READ ONLY</span>
+                                <span className="flex items-center gap-1 text-red-400"><ShieldAlert size={12} /> READ ONLY</span>
                             </div>
-                            <Editor 
-                                height="300px" 
-                                defaultLanguage="javascript" 
-                                theme="vs-dark" 
-                                value={userCode} 
-                                options={{ readOnly: true, fontSize: 15, minimap: { enabled: false }, padding: { top: 20 } }} 
+                            <Editor
+                                height="300px"
+                                defaultLanguage="javascript"
+                                theme="vs-dark"
+                                value={userCode}
+                                options={{ readOnly: true, fontSize: 15, minimap: { enabled: false }, padding: { top: 20 } }}
                             />
                         </div>
                         <div className="relative">
-                            <textarea 
-                                className="w-full bg-slate-900/50 border border-white/10 rounded-2xl p-5 text-white placeholder-gray-500 focus:border-neon-blue outline-none transition-all focus:ring-1 focus:ring-neon-blue/50 text-lg min-h-[120px]" 
-                                placeholder="// اكتب تصحيح الكود أو اشرح سبب الخطأ هنا..." 
-                                onChange={(e) => setSelectedOption(e.target.value)} 
+                            <textarea
+                                className="w-full bg-slate-900/50 border border-white/10 rounded-2xl p-5 text-white placeholder-gray-500 focus:border-neon-blue outline-none transition-all focus:ring-1 focus:ring-neon-blue/50 text-lg min-h-[120px]"
+                                placeholder="// اكتب تصحيح الكود أو اشرح سبب الخطأ هنا..."
+                                onChange={(e) => setSelectedOption(e.target.value)}
                             />
                             <div className="absolute bottom-4 left-4 text-xs text-gray-500">يدعم Markdown</div>
                         </div>
@@ -219,13 +219,13 @@ const AssessmentPage = () => {
                         </div>
                         <div className="space-y-3">
                             {orderedItems.map((item, idx) => (
-                                <div 
-                                    key={idx} 
-                                    onClick={() => { 
-                                        const newItems = [...orderedItems]; 
+                                <div
+                                    key={idx}
+                                    onClick={() => {
+                                        const newItems = [...orderedItems];
                                         // منطق بسيط للتبديل مع العنصر السابق عند الضغط
-                                        if (idx > 0) { [newItems[idx], newItems[idx-1]] = [newItems[idx-1], newItems[idx]]; setOrderedItems(newItems); } 
-                                    }} 
+                                        if (idx > 0) { [newItems[idx], newItems[idx - 1]] = [newItems[idx - 1], newItems[idx]]; setOrderedItems(newItems); }
+                                    }}
                                     className="group p-4 bg-white/5 border border-white/10 rounded-xl cursor-pointer hover:bg-white/10 hover:border-neon-blue transition-all flex items-center gap-4 active:scale-[0.98]"
                                 >
                                     <div className="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-sm font-mono font-bold text-neon-blue group-hover:bg-neon-blue group-hover:text-black transition-colors">
@@ -250,17 +250,17 @@ const AssessmentPage = () => {
                             </div>
                         </div>
                         <div className="border border-white/10 rounded-2xl overflow-hidden shadow-2xl bg-[#1e1e1e]">
-                             <div className="bg-white/5 px-4 py-2 text-xs text-gray-500 font-mono border-b border-white/5 flex items-center gap-2">
+                            <div className="bg-white/5 px-4 py-2 text-xs text-gray-500 font-mono border-b border-white/5 flex items-center gap-2">
                                 <span className="w-2 h-2 rounded-full bg-green-500"></span>
                                 <span>interactive_session.js</span>
-                             </div>
-                            <Editor 
-                                height="350px" 
-                                defaultLanguage="javascript" 
-                                theme="vs-dark" 
-                                value={userCode} 
-                                onChange={(val) => setUserCode(val)} 
-                                options={{ fontSize: 16, minimap: { enabled: false }, padding: { top: 20 } }} 
+                            </div>
+                            <Editor
+                                height="350px"
+                                defaultLanguage="javascript"
+                                theme="vs-dark"
+                                value={userCode}
+                                onChange={(val) => setUserCode(val)}
+                                options={{ fontSize: 16, minimap: { enabled: false }, padding: { top: 20 } }}
                             />
                         </div>
                     </div>
@@ -277,14 +277,14 @@ const AssessmentPage = () => {
                             </div>
                         </div>
                         <div className="grid gap-4">
-                            {question.options?.map((opt, idx) => { 
-                                const val = opt.value || opt; 
-                                const label = opt.label || opt; 
+                            {question.options?.map((opt, idx) => {
+                                const val = opt.value || opt.id || opt;
+                                const label = opt.label || opt.text || opt;
                                 return (
-                                    <button 
-                                        key={idx} 
-                                        onClick={() => !feedback && setSelectedOption(val)} 
-                                        disabled={!!feedback} 
+                                    <button
+                                        key={idx}
+                                        onClick={() => !feedback && setSelectedOption(val)}
+                                        disabled={!!feedback}
                                         className={`w-full text-left p-6 rounded-2xl border transition-all duration-300 group flex justify-between items-center relative overflow-hidden ${selectedOption === val ? 'bg-gradient-to-r from-neon-blue/20 to-transparent border-neon-blue shadow-[0_0_20px_rgba(0,217,255,0.2)]' : 'bg-white/5 border-white/10 hover:bg-white/10 hover:border-white/20'}`}
                                     >
                                         <div className={`w-8 h-8 rounded-full border-2 flex items-center justify-center mr-4 transition-colors ${selectedOption === val ? 'border-neon-blue bg-neon-blue text-black' : 'border-gray-500 text-gray-500 group-hover:border-white group-hover:text-white'}`}>
@@ -312,26 +312,26 @@ const AssessmentPage = () => {
 
     // 2. تقرير النتائج
     if (finalReport) {
-        const isPass = isFinalMode ? finalReport.passed : true; 
+        const isPass = isFinalMode ? finalReport.passed : true;
         return (
             <div className="min-h-screen bg-slate-950 text-white p-8 flex items-center justify-center relative overflow-hidden">
                 <div className="absolute inset-0 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] opacity-10"></div>
-                
+
                 <div className="glass max-w-3xl w-full p-12 rounded-[3rem] border border-white/10 text-center animate-scale-up relative z-10 shadow-2xl">
-                    
+
                     {/* أيقونة الحالة */}
                     <div className={`w-32 h-32 rounded-full flex items-center justify-center mx-auto mb-8 shadow-[0_0_50px_currentColor] ${isPass ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'}`}>
                         {isPass ? <Award className="w-16 h-16" /> : <XCircle className="w-16 h-16" />}
                     </div>
-                    
+
                     <h1 className="text-5xl font-black mb-4 tracking-tight">
                         {isFinalMode ? (isPass ? 'MISSION ACCOMPLISHED' : 'MISSION FAILED') : 'ANALYSIS COMPLETE'}
                     </h1>
-                    
+
                     <div className="text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-neon-blue via-purple-500 to-neon-pink my-10 font-mono tracking-tighter drop-shadow-lg">
                         {isFinalMode ? finalReport.score : finalReport.finalScore}%
                     </div>
-                    
+
                     {violations > 0 && (
                         <div className="bg-red-500/10 border border-red-500/50 p-4 rounded-xl mb-8 flex items-center justify-center gap-3 text-red-300 font-mono">
                             <AlertOctagon className="w-6 h-6" /> SECURITY REPORT: {violations} Violations Detected
@@ -344,16 +344,16 @@ const AssessmentPage = () => {
                         </h3>
                         <p className="text-gray-300 leading-relaxed text-lg">{isFinalMode ? finalReport.feedback : finalReport.summary}</p>
                     </div>
-                    
+
                     <div className="flex justify-center gap-6 flex-wrap">
                         <button onClick={() => navigate('/dashboard')} className="px-8 py-4 rounded-2xl border border-white/20 hover:bg-white/10 text-white font-bold text-lg transition-all">
                             الرئيسية
                         </button>
-                        
+
                         {/* ✅ زر الشهادة يظهر الآن عند النجاح في أي اختبار نهائي */}
                         {isPass && isFinalMode && (
-                            <button 
-                                onClick={() => navigate('/certificate')} 
+                            <button
+                                onClick={() => navigate('/certificate')}
                                 className="px-10 py-4 bg-gradient-to-r from-yellow-400 to-orange-500 text-black font-black text-xl rounded-2xl hover:scale-105 transition-transform shadow-xl shadow-orange-500/30 flex items-center gap-3"
                             >
                                 <Award className="w-6 h-6" /> استلام الشهادة
@@ -381,7 +381,7 @@ const AssessmentPage = () => {
             </div>
         );
     }
-    
+
     if (!question) return null;
 
     // 4. عرض الامتحان
@@ -389,12 +389,12 @@ const AssessmentPage = () => {
         <div className="min-h-screen bg-slate-950 text-white relative overflow-hidden flex flex-col font-sans">
             {/* الحماية */}
             <SecurityMonitor isActive={!finalReport} onViolation={() => setViolations(prev => prev + 1)} />
-            
+
             {/* شريط التقدم العلوي */}
             <div className="absolute top-0 left-0 w-full h-2 bg-slate-900 z-50">
                 <div className="h-full bg-gradient-to-r from-neon-blue to-neon-violet transition-all duration-1000 ease-linear" style={{ width: `${((currentIndex) / (currentAssessmentQuestions.length)) * 100}%` }} />
             </div>
-            
+
             <div className="flex-1 py-12 px-6 flex items-center justify-center relative z-10">
                 <div className="w-full max-w-6xl">
                     {/* رأس السؤال */}
@@ -424,21 +424,21 @@ const AssessmentPage = () => {
                     {/* جسم السؤال */}
                     <div className="glass rounded-[3rem] p-10 md:p-16 border border-white/10 relative overflow-hidden shadow-2xl bg-slate-900/50 backdrop-blur-3xl">
                         {isFinalMode && <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-600 via-purple-600 to-blue-600 animate-gradient" />}
-                        
+
                         <QuestionText text={question.question} />
-                        
+
                         {renderQuestionContent()}
 
                         {/* زر التحكم */}
                         <div className="mt-12 flex justify-end items-center pt-8 border-t border-white/5">
                             {!feedback ? (
-                                <button 
-                                    onClick={handleAnswerSubmit} 
-                                    disabled={isEvaluating} 
+                                <button
+                                    onClick={handleAnswerSubmit}
+                                    disabled={isEvaluating}
                                     className="group relative px-12 py-5 bg-gradient-to-r from-neon-blue to-neon-violet rounded-2xl font-bold text-white text-xl hover:scale-[1.02] transition-all disabled:opacity-50 disabled:cursor-not-allowed shadow-[0_0_30px_rgba(59,130,246,0.4)] hover:shadow-[0_0_50px_rgba(59,130,246,0.6)]"
                                 >
                                     <span className="relative z-10 flex items-center gap-3">
-                                        {isEvaluating ? <Loader className="animate-spin w-6 h-6" /> : isFinalMode ? (currentIndex === currentAssessmentQuestions.length - 1 ? 'إنهاء الامتحان' : 'التالي') : 'تأكيد الإجابة'} 
+                                        {isEvaluating ? <Loader className="animate-spin w-6 h-6" /> : isFinalMode ? (currentIndex === currentAssessmentQuestions.length - 1 ? 'إنهاء الامتحان' : 'التالي') : 'تأكيد الإجابة'}
                                         {!isEvaluating && <ArrowRight className="w-6 h-6 group-hover:translate-x-1 transition-transform" />}
                                     </span>
                                 </button>
@@ -451,8 +451,8 @@ const AssessmentPage = () => {
                                         </p>
                                         <p className="text-gray-300 text-lg leading-relaxed pl-11">{feedback.feedback}</p>
                                     </div>
-                                    <button 
-                                        onClick={() => { if(currentIndex < currentAssessmentQuestions.length - 1) setCurrentIndex(prev => prev+1); else finalizeAssessmentAI(); }} 
+                                    <button
+                                        onClick={() => { if (currentIndex < currentAssessmentQuestions.length - 1) setCurrentIndex(prev => prev + 1); else finalizeAssessmentAI(); }}
                                         className="w-full py-5 bg-white/5 hover:bg-white/10 rounded-2xl font-bold text-xl transition-all border border-white/10 hover:border-white/30"
                                     >
                                         الانتقال للسؤال التالي
