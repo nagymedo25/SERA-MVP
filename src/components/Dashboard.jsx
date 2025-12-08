@@ -25,7 +25,7 @@ const Dashboard = () => {
         dailyTasks, 
         refreshDashboard, 
         isAnalyzing,
-        enrolledCourses // ✅ نحتاج هذه للتحقق
+        enrolledCourses 
     } = useSimulationStore()
 
     const taskListRef = useRef(null)
@@ -112,19 +112,18 @@ const Dashboard = () => {
                         {/* Quick Actions */}
                         <AnimatedCard className="lg:col-span-2 glass rounded-3xl p-8 border border-white/10">
                             <h3 className="text-xl font-bold mb-6">{t('dashboard.quickActions')}</h3>
-                            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                            {/* تم تعديل الشبكة لتصبح 3 أعمدة بدلاً من 4 لتناسب العناصر المتبقية */}
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                                 <MagneticButton onClick={() => navigate('/courses')} className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-gradient-to-br from-cyan-500/20 to-blue-600/20 border border-cyan-500/30 hover:border-cyan-400 transition-all group">
                                     <BookOpen className="w-8 h-8 text-cyan-400 group-hover:scale-110 transition-transform" />
                                     <span className="text-sm font-medium">{t('dashboard.actions.courses')}</span>
                                 </MagneticButton>
-                                <MagneticButton onClick={() => navigate('/assessment')} className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-gradient-to-br from-purple-500/20 to-pink-600/20 border border-purple-500/30 hover:border-purple-400 transition-all group">
-                                    <Code className="w-8 h-8 text-purple-400 group-hover:scale-110 transition-transform" />
-                                    <span className="text-sm font-medium">{t('dashboard.actions.assessment')}</span>
-                                </MagneticButton>
+                                
                                 <MagneticButton onClick={() => navigate('/reports')} className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-gradient-to-br from-emerald-500/20 to-green-600/20 border border-emerald-500/30 hover:border-emerald-400 transition-all group">
                                     <TrendingUp className="w-8 h-8 text-emerald-400 group-hover:scale-110 transition-transform" />
                                     <span className="text-sm font-medium">{t('dashboard.actions.reports')}</span>
                                 </MagneticButton>
+                                
                                 <MagneticButton onClick={() => navigate('/profile')} className="flex flex-col items-center gap-3 p-6 rounded-2xl bg-gradient-to-br from-orange-500/20 to-red-600/20 border border-orange-500/30 hover:border-orange-400 transition-all group">
                                     <Award className="w-8 h-8 text-orange-400 group-hover:scale-110 transition-transform" />
                                     <span className="text-sm font-medium">{t('dashboard.actions.profile')}</span>
@@ -142,7 +141,6 @@ const Dashboard = () => {
                             </div>
 
                             <div ref={taskListRef} className="space-y-3">
-                                {/* ✅ الحالة الخاصة: لا توجد كورسات */}
                                 {enrolledCourses.length === 0 ? (
                                     <div className="text-center py-10 bg-white/5 rounded-2xl border border-dashed border-white/10">
                                         <div className="w-16 h-16 bg-neon-blue/10 rounded-full flex items-center justify-center mx-auto mb-4 animate-bounce">
